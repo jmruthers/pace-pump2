@@ -49,11 +49,8 @@ export function buildRecipientPoolDescriptor(
     const pool: EventParticipantsPool = {
       type: 'event_participants',
       event_id: selectedEventId,
+      filters: buildEventFilters(eventFilters) ?? {},
     };
-    const filters = buildEventFilters(eventFilters);
-    if (filters != null) {
-      pool.filters = filters;
-    }
     return pool;
   }
 
@@ -64,10 +61,7 @@ export function buildRecipientPoolDescriptor(
   const pool: OrgMembersPool = {
     type: 'org_members',
     organisation_id: organisationId,
+    filters: buildOrgMembersFilters(orgFilters) ?? {},
   };
-  const filters = buildOrgMembersFilters(orgFilters);
-  if (filters != null) {
-    pool.filters = filters;
-  }
   return pool;
 }

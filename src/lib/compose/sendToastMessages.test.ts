@@ -34,5 +34,6 @@ describe('sendToastMessages', () => {
   it('maps failure titles by action', () => {
     expect(sendFailureToastTitle('schedule')).toBe('Schedule failed');
     expect(sendFailureToastTitle('sendTest')).toBe('Send test failed');
+    expect(sendFailureToastTitle('saveDraft')).toBe('Save draft failed');
   });
 });

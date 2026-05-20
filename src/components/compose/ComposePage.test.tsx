@@ -12,6 +12,9 @@ const toastMock = vi.fn();
 const resetToOrgMembersDefaultMock = vi.fn();
 let draftBodyText = '';
 let adapterSourceContext: { sourceContextType?: string; sourceContextId?: string } = {};
+let recipientMode: 'org_members' | 'event_participants' | 'manual' = 'org_members';
+let canReadPage = true;
+let canSend = true;
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -30,14 +33,25 @@ vi.mock('@solvera/pace-core/hooks', () => ({
 }));
 
 vi.mock('@solvera/pace-core/rbac', () => ({
-  PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PagePermissionGuard: ({
+    children,
+    operation,
+  }: {
+    children: ReactNode;
+    operation: string;
+  }) => {
+    if (operation === 'read' && !canReadPage) {
+      return <p role="alert">Access denied</p>;
+    }
+    return <>{children}</>;
+  },
 }));
 
 vi.mock('@/components/comms/CommRbacContextProvider', () => ({
   useCommRbacContext: () => ({
     canCompose: true,
-    canSend: true,
-    canSchedule: true,
+    canSend,
+    canSchedule: canSend,
     scopeType: 'organisation',
     scopeId: 'org-1',
   }),
@@ -61,17 +75,28 @@ vi.mock('@/hooks/useEffectivePumpSenderIdentity', () => ({
   }),
 }));
 
-vi.mock('@/hooks/compose/useComposeRecipientState', () => ({
-  useComposeRecipientState: () => ({
-    mode: 'org_members',
+function buildRecipientMock() {
+  const sourceContext =
+    recipientMode === 'event_participants'
+      ? { sourceContextType: 'event' as const, sourceContextId: 'evt-1' }
+      : { sourceContextType: undefined, sourceContextId: undefined };
+  const recipientPool =
+    recipientMode === 'event_participants'
+      ? { type: 'event_participants' as const, event_id: 'evt-1', filters: {} }
+      : recipientMode === 'manual'
+        ? { type: 'manual' as const, member_ids: ['m-1'] }
+        : { type: 'org_members' as const, organisation_id: 'org-1', filters: {} };
+
+  return {
+    mode: recipientMode,
     setMode: vi.fn(),
-    selectedEventId: null,
+    selectedEventId: recipientMode === 'event_participants' ? 'evt-1' : null,
     setSelectedEventId: vi.fn(),
     orgFilters: { memberTypeIds: [], unitIds: [], includeInactive: false },
     eventFilters: { registrationTypeIds: [], statuses: [], unitIds: [] },
-    manualMemberIds: [],
-    recipientPool: { type: 'org_members', organisation_id: 'org-1' },
-    sourceContext: { sourceContextType: undefined, sourceContextId: undefined },
+    manualMemberIds: recipientMode === 'manual' ? ['m-1'] : [],
+    recipientPool,
+    sourceContext,
     resetToOrgMembersDefault: resetToOrgMembersDefaultMock,
     toggleMemberTypeId: vi.fn(),
     toggleOrgUnitId: vi.fn(),
@@ -81,7 +106,11 @@ vi.mock('@/hooks/compose/useComposeRecipientState', () => ({
     toggleEventUnitId: vi.fn(),
     addManualMemberId: vi.fn(),
     removeManualMemberId: vi.fn(),
-  }),
+  };
+}
+
+vi.mock('@/hooks/compose/useComposeRecipientState', () => ({
+  useComposeRecipientState: () => buildRecipientMock(),
 }));
 
 vi.mock('@/hooks/compose/useOrganisationEvents', () => ({
@@ -128,7 +157,9 @@ vi.mock('@solvera/pace-core/comms', () => ({
     onCancel,
     onSendComplete,
     onSendError,
+    onScheduleComplete,
     sourceContextType,
+    rbac,
   }: {
     onCancel?: () => void;
     onSendComplete?: (result: {
@@ -138,11 +169,16 @@ vi.mock('@solvera/pace-core/comms', () => ({
       warnings: [];
     }) => void;
     onSendError?: (message: string, action?: string) => void;
+    onScheduleComplete?: (payload: { scheduledAtIso: string }) => void;
     sourceContextType?: string;
     sourceContextId?: string;
+    rbac: { canSend: boolean };
   }) => (
     <section aria-label="Communication composer">
       <span data-testid="source-context-type">{String(sourceContextType)}</span>
+      {rbac.canSend ? null : (
+        <p>You have view-only access to this message.</p>
+      )}
       <button type="button" onClick={() => onCancel?.()}>
         Cancel
       </button>
@@ -159,8 +195,29 @@ vi.mock('@solvera/pace-core/comms', () => ({
       >
         Send now
       </button>
-      <button type="button" onClick={() => onSendError?.('Pool empty', 'send')}>
-        Trigger send error
+      <button
+        type="button"
+        onClick={() =>
+          onSendError?.('Cannot send to an empty pool.', 'send')
+        }
+      >
+        Trigger empty pool
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onSendError?.('Scheduled time must be in the future.', 'schedule')
+        }
+      >
+        Trigger schedule error
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onScheduleComplete?.({ scheduledAtIso: '2026-12-01T10:00:00.000Z' })
+        }
+      >
+        Confirm schedule
       </button>
     </section>
   ),
@@ -217,15 +274,41 @@ describe('ComposePage', () => {
     toastMock.mockReset();
     resetToOrgMembersDefaultMock.mockReset();
     draftBodyText = '';
+    recipientMode = 'org_members';
+    canReadPage = true;
+    canSend = true;
   });
 
   afterEach(cleanup);
 
-  it('renders compose shell and wires adapter source context', () => {
+  it('renders compose shell and wires adapter source context for org_members', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: 'Compose' })).toBeTruthy();
     expect(screen.getByText('Recipients')).toBeTruthy();
     expect(adapterSourceContext.sourceContextType).toBeUndefined();
+  });
+
+  it('wires event source context when recipient mode is event_participants', () => {
+    recipientMode = 'event_participants';
+    renderPage();
+    expect(adapterSourceContext).toEqual({
+      sourceContextType: 'event',
+      sourceContextId: 'evt-1',
+    });
+    expect(screen.getByTestId('source-context-type').textContent).toBe('event');
+  });
+
+  it('shows access denied when read permission is missing', () => {
+    canReadPage = false;
+    renderPage();
+    expect(screen.getByText('Access denied')).toBeTruthy();
+    expect(screen.queryByLabelText('Communication composer')).toBeNull();
+  });
+
+  it('shows read-only composer footer when canSend is false', () => {
+    canSend = false;
+    renderPage();
+    expect(screen.getByText('You have view-only access to this message.')).toBeTruthy();
   });
 
   it('navigates home on clean cancel', async () => {
@@ -259,9 +342,35 @@ describe('ComposePage', () => {
   it('shows destructive toast on send error', async () => {
     const user = userEvent.setup();
     renderPage();
-    await user.click(screen.getByRole('button', { name: 'Trigger send error' }));
+    await user.click(screen.getByRole('button', { name: 'Trigger empty pool' }));
     expect(toastMock).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: 'destructive', title: 'Send failed' })
+      expect.objectContaining({
+        variant: 'destructive',
+        title: 'Send failed',
+        description: 'Cannot send to an empty pool.',
+      })
     );
+  });
+
+  it('shows schedule failed toast on schedule error', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: 'Trigger schedule error' }));
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'destructive',
+        title: 'Schedule failed',
+      })
+    );
+  });
+
+  it('shows schedule success toast and light-resets recipient mode', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: 'Confirm schedule' }));
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: 'success', title: 'Message scheduled' })
+    );
+    expect(resetToOrgMembersDefaultMock).toHaveBeenCalled();
   });
 });

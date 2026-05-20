@@ -14,7 +14,24 @@ describe('buildRecipientPoolDescriptor', () => {
         eventFilters: { registrationTypeIds: [], statuses: [], unitIds: [] },
         manualMemberIds: [],
       })
-    ).toEqual({ type: 'org_members', organisation_id: orgId });
+    ).toEqual({ type: 'org_members', organisation_id: orgId, filters: {} });
+  });
+
+  it('adds include_inactive when switch is on', () => {
+    expect(
+      buildRecipientPoolDescriptor({
+        mode: 'org_members',
+        organisationId: orgId,
+        selectedEventId: null,
+        orgFilters: { memberTypeIds: [], unitIds: [], includeInactive: true },
+        eventFilters: { registrationTypeIds: [], statuses: [], unitIds: [] },
+        manualMemberIds: [],
+      })
+    ).toEqual({
+      type: 'org_members',
+      organisation_id: orgId,
+      filters: { include_inactive: true },
+    });
   });
 
   it('casts membership type ids to strings', () => {
@@ -44,7 +61,7 @@ describe('buildRecipientPoolDescriptor', () => {
         eventFilters: { registrationTypeIds: [], statuses: [], unitIds: [] },
         manualMemberIds: [],
       })
-    ).toEqual({ type: 'event_participants', event_id: 'evt-1' });
+    ).toEqual({ type: 'event_participants', event_id: 'evt-1', filters: {} });
   });
 
   it('builds manual pool with member ids', () => {

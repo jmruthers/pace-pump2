@@ -1,7 +1,6 @@
 import type { CommChannel } from '@solvera/pace-core/comms';
 import { Alert, AlertDescription, AlertTitle, Card, CardContent } from '@solvera/pace-core/components';
 import type { EffectivePumpSenderIdentity } from '@/lib/comms/senderIdentityContract';
-import { deriveChannelReadiness } from '@/lib/comms/senderIdentityContract';
 
 export interface SenderIdentityBannerProps {
   channel: CommChannel;
@@ -16,11 +15,10 @@ export function SenderIdentityBanner({
   isLoading,
   errorMessage,
 }: SenderIdentityBannerProps) {
-  const readiness = identity != null ? deriveChannelReadiness(identity) : null;
   const channelUnavailable =
-    readiness != null &&
-    ((channel === 'email' && !readiness.canSendEmail) ||
-      (channel === 'sms' && !readiness.canSendSms));
+    identity != null &&
+    ((channel === 'email' && !identity.canSendEmail) ||
+      (channel === 'sms' && !identity.canSendSms));
 
   return (
     <section className="grid gap-4">
