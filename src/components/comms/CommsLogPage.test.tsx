@@ -1,7 +1,7 @@
 /* eslint-disable pace-core-compliance/prefer-pace-core-components -- test doubles */
 // @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -12,6 +12,7 @@ vi.mock('@/hooks/comms/usePumpSupabase.js', () => ({
     functions: { invoke: vi.fn() },
   }),
 }));
+import type { PumpMessageRow } from '@/lib/comms/commsLogTypes.js';
 import { CommsLogPage } from './CommsLogPage.js';
 
 vi.mock('@solvera/pace-core/hooks', () => ({
@@ -51,16 +52,36 @@ vi.mock('@/components/comms/CommRbacContextProvider', () => ({
 
 vi.mock('./CommsLogTable.js', () => ({
   CommsLogTable: ({
+    listRefreshKey,
     onRowActivate,
     onFetchSuccess,
     onFetchError,
   }: {
-    onRowActivate: (row: { id: string }) => void;
+    listRefreshKey: number;
+    onRowActivate: (row: PumpMessageRow) => void;
     onFetchSuccess: (rows: unknown[], total: number) => void;
     onFetchError: (error: Error) => void;
   }) => (
-    <div>
-      <button type="button" onClick={() => onRowActivate({ id: 'msg-abc' })}>
+    <div data-refresh-key={listRefreshKey}>
+      <button
+        type="button"
+        onClick={() =>
+          onRowActivate({
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            organisation_id: 'org-42',
+            channel: 'email',
+            subject: 'Hello',
+            body_text: 'Body',
+            status: 'sent',
+            scheduled_at: null,
+            sent_at: '2026-05-01T10:00:00.000Z',
+            source_app: 'PUMP',
+            total_recipients: 1,
+            created_by: 'user-1',
+            created_at: '2026-05-01T09:00:00.000Z',
+          } as PumpMessageRow)
+        }
+      >
         Open row
       </button>
       <button type="button" onClick={() => onFetchSuccess([], 0)}>
@@ -75,17 +96,25 @@ vi.mock('./CommsLogTable.js', () => ({
 
 vi.mock('./CommsLogDrillDownDialog.js', () => ({
   CommsLogDrillDownDialog: ({
+    messageId,
     open,
-    onOpenChange,
   }: {
+    messageId: string | null;
     open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }) =>
-    open ? (
-      <button type="button" onClick={() => onOpenChange(false)}>
-        Close drill-down
-      </button>
-    ) : null,
+  }) => {
+    if (!open) {
+      return null;
+    }
+    const malformed =
+      messageId != null &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        messageId
+      );
+    if (malformed) {
+      return <p>Message not found or not visible.</p>;
+    }
+    return <p data-testid="drill-down-open">Drill-down open</p>;
+  },
 }));
 
 vi.mock('./CommsLogFilters.js', () => ({
@@ -120,12 +149,21 @@ describe('CommsLogPage', () => {
     expect(screen.getByRole('button', { name: 'New message' })).toBeTruthy();
   });
 
-  it('sets message query param when a row is activated', async () => {
+  it('opens drill-down when a row is activated', async () => {
     const user = userEvent.setup();
     renderPage();
 
     await user.click(screen.getAllByRole('button', { name: 'Open row' })[0]!);
-    expect(screen.getByRole('button', { name: 'Close drill-down' })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId('drill-down-open')).toBeTruthy();
+    });
+  });
+
+  it('renders malformed drill-down error for invalid message id', () => {
+    renderPage('/?message=not-a-uuid');
+    expect(
+      screen.getByText('Message not found or not visible.')
+    ).toBeTruthy();
   });
 
   it('renders empty state when the list has zero rows', async () => {

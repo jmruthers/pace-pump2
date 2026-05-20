@@ -38,12 +38,12 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe('useDeletePumpDraft', () => {
-  it('uses a neutral toast when delete returns zero rows', async () => {
+  it('uses a neutral toast and refreshes when delete returns zero rows', async () => {
     const { toast } = await import('@solvera/pace-core/components');
-    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const onListRefresh = vi.fn();
     deleteEq.mockResolvedValueOnce({ data: [], error: null });
 
-    const { result } = renderHook(() => useDeletePumpDraft(), { wrapper });
+    const { result } = renderHook(() => useDeletePumpDraft(onListRefresh), { wrapper });
     result.current.mutate({ messageId: 'draft-1' });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -51,26 +51,36 @@ describe('useDeletePumpDraft', () => {
       variant: 'default',
       title: 'Draft already removed.',
     });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['pumpMessages'] });
+    expect(onListRefresh).toHaveBeenCalledTimes(1);
   });
 
-  it('does not refetch on delete failure', async () => {
+  it('refreshes the list when delete returns one row', async () => {
+    const onListRefresh = vi.fn();
+    deleteEq.mockResolvedValueOnce({ data: [{ id: 'draft-2' }], error: null });
+
+    const { result } = renderHook(() => useDeletePumpDraft(onListRefresh), { wrapper });
+    result.current.mutate({ messageId: 'draft-2' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(onListRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refresh on delete failure', async () => {
     const { toast } = await import('@solvera/pace-core/components');
-    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const onListRefresh = vi.fn();
     deleteEq.mockResolvedValueOnce({
       data: null,
       error: { message: 'RLS denied' },
     });
-    invalidateSpy.mockClear();
 
-    const { result } = renderHook(() => useDeletePumpDraft(), { wrapper });
-    result.current.mutate({ messageId: 'draft-2' });
+    const { result } = renderHook(() => useDeletePumpDraft(onListRefresh), { wrapper });
+    result.current.mutate({ messageId: 'draft-3' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(toast).toHaveBeenCalledWith({
       variant: 'destructive',
       title: 'RLS denied',
     });
-    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(onListRefresh).not.toHaveBeenCalled();
   });
 });

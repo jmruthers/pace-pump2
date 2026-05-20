@@ -25,6 +25,7 @@ import { ChannelBadge, MessageStatusBadge } from './commsLogBadges.js';
 
 export function CommsLogTable({
   organisationId,
+  listRefreshKey,
   searchState,
   onTableParamsChange,
   onFetchSuccess,
@@ -34,6 +35,7 @@ export function CommsLogTable({
   onDeleteRow,
 }: {
   organisationId: string;
+  listRefreshKey: number;
   searchState: CommsLogSearchState;
   onTableParamsChange: (
     patch: Partial<Pick<CommsLogSearchState, 'pageIndex' | 'pageSize' | 'sortDir'>>
@@ -173,7 +175,7 @@ export function CommsLogTable({
 
   return (
     <DataTable<PumpMessageRow>
-      key={`${searchState.pageIndex}-${searchState.pageSize}-${searchState.sortDir}-${searchState.channel ?? ''}-${searchState.statuses.join(',')}-${searchState.from ?? ''}-${searchState.to ?? ''}`}
+      key={`${organisationId}-${listRefreshKey}-${searchState.pageIndex}-${searchState.pageSize}-${searchState.sortDir}-${searchState.channel ?? ''}-${searchState.statuses.join(',')}-${searchState.from ?? ''}-${searchState.to ?? ''}`}
       data={[]}
       columns={columns}
       rbac={{ pageName: 'CommsLog' }}

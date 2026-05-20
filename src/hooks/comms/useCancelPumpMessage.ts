@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from '@solvera/pace-core/components';
 import type { FunctionsInvoke } from '@solvera/pace-core/rbac';
 import { usePumpSupabase } from '@/hooks/comms/usePumpSupabase.js';
@@ -21,9 +21,8 @@ function shouldRefetchListOnCancelError(code: string): boolean {
   return code === 'PUMP_CANCEL_INVALID_STATUS';
 }
 
-export function useCancelPumpMessage() {
+export function useCancelPumpMessage(onListRefresh?: () => void) {
   const supabase = usePumpSupabase() as PumpSupabaseClient;
-  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ messageId, organisationId }: CancelInput) => {
@@ -51,18 +50,18 @@ export function useCancelPumpMessage() {
       }
       return result.data;
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       toast({ variant: 'success', title: 'Message cancelled.' });
-      await queryClient.invalidateQueries({ queryKey: ['pumpMessages'] });
+      onListRefresh?.();
     },
-    onError: async (error: Error & { code?: string }) => {
+    onError: (error: Error & { code?: string }) => {
       const code = error.code ?? 'PUMP_CANCEL_FAILED';
       toast({
         variant: 'destructive',
         title: error.message || 'Cancel failed.',
       });
       if (shouldRefetchListOnCancelError(code)) {
-        await queryClient.invalidateQueries({ queryKey: ['pumpMessages'] });
+        onListRefresh?.();
       }
     },
   });

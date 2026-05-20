@@ -37,10 +37,16 @@ export function CommsLogHome() {
   );
   const listErrorToastShown = useRef(false);
 
+  const [listRefreshKey, setListRefreshKey] = useState(0);
   const [cancelRow, setCancelRow] = useState<PumpMessageRow | null>(null);
   const [deleteRow, setDeleteRow] = useState<PumpMessageRow | null>(null);
-  const cancelMutation = useCancelPumpMessage();
-  const deleteMutation = useDeletePumpDraft();
+
+  const bumpListRefresh = useCallback(() => {
+    setListRefreshKey((previous) => previous + 1);
+  }, []);
+
+  const cancelMutation = useCancelPumpMessage(bumpListRefresh);
+  const deleteMutation = useDeletePumpDraft(bumpListRefresh);
 
   const cachedRow =
     state.messageId != null ? rowCache.get(state.messageId) ?? null : null;
@@ -74,7 +80,7 @@ export function CommsLogHome() {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['pumpMessages'] });
+    bumpListRefresh();
     if (state.messageId != null) {
       await queryClient.invalidateQueries({
         queryKey: pumpRecipientsQueryKey(state.messageId),
@@ -84,7 +90,7 @@ export function CommsLogHome() {
       });
     }
     setIsRefreshing(false);
-  }, [queryClient, state.messageId]);
+  }, [bumpListRefresh, queryClient, state.messageId]);
 
   const handleCompose = useCallback(() => {
     navigate('/comms/create');
@@ -162,6 +168,7 @@ export function CommsLogHome() {
       {showTable ? (
         <CommsLogTable
           organisationId={organisationId}
+          listRefreshKey={listRefreshKey}
           searchState={state}
           onTableParamsChange={syncFromTable}
           onFetchSuccess={handleFetchSuccess}

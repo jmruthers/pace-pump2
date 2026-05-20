@@ -24,8 +24,8 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe('useCancelPumpMessage', () => {
-  it('refetches the list when cancel returns invalid status', async () => {
-    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+  it('refreshes the list when cancel returns invalid status', async () => {
+    const onListRefresh = vi.fn();
     invoke.mockResolvedValueOnce({
       data: {
         ok: false,
@@ -37,7 +37,7 @@ describe('useCancelPumpMessage', () => {
       error: null,
     });
 
-    const { result } = renderHook(() => useCancelPumpMessage(), { wrapper });
+    const { result } = renderHook(() => useCancelPumpMessage(onListRefresh), { wrapper });
     result.current.mutate({
       messageId: 'msg-1',
       organisationId: 'org-1',
@@ -45,12 +45,12 @@ describe('useCancelPumpMessage', () => {
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['pumpMessages'] });
+      expect(onListRefresh).toHaveBeenCalledTimes(1);
     });
   });
 
-  it('does not refetch when RBAC is denied', async () => {
-    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+  it('does not refresh the list when RBAC is denied', async () => {
+    const onListRefresh = vi.fn();
     invoke.mockResolvedValueOnce({
       data: {
         ok: false,
@@ -58,16 +58,75 @@ describe('useCancelPumpMessage', () => {
       },
       error: null,
     });
-    invalidateSpy.mockClear();
 
-    const { result } = renderHook(() => useCancelPumpMessage(), { wrapper });
+    const { result } = renderHook(() => useCancelPumpMessage(onListRefresh), { wrapper });
     result.current.mutate({
       messageId: 'msg-2',
       organisationId: 'org-1',
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(onListRefresh).not.toHaveBeenCalled();
+  });
+
+  it('does not refresh the list on owner mismatch', async () => {
+    const onListRefresh = vi.fn();
+    invoke.mockResolvedValueOnce({
+      data: {
+        ok: false,
+        error: {
+          code: 'PUMP_CANCEL_OWNER_MISMATCH',
+          message: 'Only the creator can cancel this message.',
+        },
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useCancelPumpMessage(onListRefresh), { wrapper });
+    result.current.mutate({
+      messageId: 'msg-4',
+      organisationId: 'org-1',
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(onListRefresh).not.toHaveBeenCalled();
+  });
+
+  it('does not refresh the list on generic cancel failure', async () => {
+    const onListRefresh = vi.fn();
+    invoke.mockResolvedValueOnce({
+      data: {
+        ok: false,
+        error: { code: 'PUMP_CANCEL_FAILED', message: 'Cancel failed.' },
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useCancelPumpMessage(onListRefresh), { wrapper });
+    result.current.mutate({
+      messageId: 'msg-5',
+      organisationId: 'org-1',
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(onListRefresh).not.toHaveBeenCalled();
+  });
+
+  it('refreshes the list on cancel success', async () => {
+    const onListRefresh = vi.fn();
+    invoke.mockResolvedValueOnce({
+      data: { ok: true, data: { message_id: 'msg-6' } },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useCancelPumpMessage(onListRefresh), { wrapper });
+    result.current.mutate({
+      messageId: 'msg-6',
+      organisationId: 'org-1',
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(onListRefresh).toHaveBeenCalledTimes(1);
   });
 
   it('surfaces network failures', async () => {

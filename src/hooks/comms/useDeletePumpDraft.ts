@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from '@solvera/pace-core/components';
 import { usePumpSupabase } from '@/hooks/comms/usePumpSupabase.js';
 import { useUnifiedAuth } from '@solvera/pace-core/hooks';
@@ -7,9 +7,8 @@ interface DeleteInput {
   messageId: string;
 }
 
-export function useDeletePumpDraft() {
+export function useDeletePumpDraft(onListRefresh?: () => void) {
   const supabase = usePumpSupabase();
-  const queryClient = useQueryClient();
   const { user } = useUnifiedAuth();
 
   return useMutation({
@@ -39,13 +38,13 @@ export function useDeletePumpDraft() {
       }
       return data ?? [];
     },
-    onSuccess: async (rows) => {
+    onSuccess: (rows) => {
       if (rows.length === 0) {
         toast({ variant: 'default', title: 'Draft already removed.' });
       } else {
         toast({ variant: 'success', title: 'Draft deleted.' });
       }
-      await queryClient.invalidateQueries({ queryKey: ['pumpMessages'] });
+      onListRefresh?.();
     },
     onError: (error: Error) => {
       toast({

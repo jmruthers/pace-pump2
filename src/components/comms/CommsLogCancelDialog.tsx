@@ -45,6 +45,7 @@ export function CommsLogCancelDialog({
           <Button
             type="button"
             variant="outline"
+            autoFocus
             disabled={isPending}
             onClick={() => onOpenChange(false)}
           >

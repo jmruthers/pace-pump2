@@ -93,7 +93,7 @@ export function CommsLogDrillDownDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          {row != null ? (
+          {row != null && !notFound ? (
             <>
               <DialogTitle>
                 {subjectLine(row.channel, row.subject)}
