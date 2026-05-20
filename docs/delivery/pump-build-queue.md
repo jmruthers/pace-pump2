@@ -20,9 +20,9 @@
 | slice_id | depends_on | status | blocker_reason |
 | --- | --- | --- | --- |
 | PUMP-01 — App shell & information architecture | - | done | CommRbac: inline `src/components/comms/CommRbacContextProvider.tsx` (2026-05-20) |
-| PUMP-04 — Template library | PUMP-01 |  |  |
+| PUMP-04 — Template library | PUMP-01 | done | `046614c` + remediation; validate PASS; AC 17/17 — [acceptance status](PUMP-04-acceptance-status.md) |
 | PUMP-02 — Communications log home | PUMP-01 | done | SPA + remediation (`listRefreshKey`, confirm `autoFocus`); validate green; AC [`PUMP-02-ac-status.md`](PUMP-02-ac-status.md); §12 manual QA pack [`PUMP-02-qa-pack.md`](../test-packs/PUMP-02-qa-pack.md) |
-| PUMP-03 — Platform-managed sender identity contract | PUMP-01 |  |  |
+| PUMP-03 — Platform-managed sender identity contract | PUMP-01 | done | SPA contract + AC trace 2026-05-20; AC-7 env-gated; AC-10/11 → PUMP-07 |
 | PUMP-05 — Compose & send | PUMP-01, PUMP-04 |  |  |
 | PUMP-06 — Webhooks & delivery pipeline (Edge-only) | PUMP-05 |  |  |
 | PUMP-07 — Send Pipeline Edge Implementation | PUMP-05, PUMP-06 |  |  |
@@ -41,6 +41,10 @@
 - authority: [`docs/requirements/PU04-template-library-requirements.md`](../requirements/PU04-template-library-requirements.md)
 - backend freeze: PU04 PASS per [`pump-backend-ready-report.md`](pump-backend-ready-report.md) — `pump_organisation_templates` authenticated RLS (DB-410)
 - sequencing: [`pump-architecture.md`](../requirements/pump-architecture.md) § Implementation order — templates before comms log read-path validation
+- delivery: commit `046614c` on `cursor/c43ae609` — `/comms/templates` CRUD UI, hooks, lib helpers, tests, [`PUMP-04-qa-pack.md`](../test-packs/PUMP-04-qa-pack.md)
+- validation: `npm run validate` PASS (2026-05-20) — authority, type-check, lint, build, tests, pace-core audit
+- acceptance: §11 — **17/17 complete** — [PUMP-04-acceptance-status.md](PUMP-04-acceptance-status.md); remediation in [PUMP-04-remediation-plan.md](PUMP-04-remediation-plan.md)
+- manual QA: §12 verification steps pending (dev-db `yihzsfcceciimdoiibif`)
 
 ### PUMP-02 — Communications log home
 
@@ -55,7 +59,10 @@
 
 - authority: [`docs/requirements/PU03-sender-identity-contract-requirements.md`](../requirements/PU03-sender-identity-contract-requirements.md)
 - backend freeze: PU03 PASS per [`pump-backend-ready-report.md`](pump-backend-ready-report.md) — `pump_get_effective_sender_identity` RPC; **`pump_org_settings` FORCE RLS** (**DB-PUMP-001**)
-- contract-only: no standalone SPA merge per PU03 §1 / §14–§15; verification rolls into PUMP-05 compose consumption and PUMP Edge send-time validation
+- acceptance trace: [`PUMP-03-acceptance-trace.md`](PUMP-03-acceptance-trace.md) — AC-1..9 SPA-complete (conditional on live env); AC-10/11 deferred to PUMP-07
+- remediation: [`PUMP-03-remediation-plan.md`](PUMP-03-remediation-plan.md) — closed for SPA; AC-7 optional credentials per [`PUMP-03-contract-test-user.md`](PUMP-03-contract-test-user.md)
+- SPA contract: `useEffectivePumpSenderIdentity` + `src/lib/comms/senderIdentityContract*` (24 unit + 9 integration tests; integration skipped in CI without live env)
+- contract-only UI: no compose banner — PUMP-05 consumes the hook; Edge send-time validation in pace-core2 (PUMP-07)
 
 ### PUMP-05 — Compose & send
 

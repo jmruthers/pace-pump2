@@ -32,11 +32,7 @@ const ComposePlaceholder = lazy(() =>
   }))
 );
 
-const TemplatesPlaceholder = lazy(() =>
-  import('@/components/shell/TemplatesPlaceholder').then((module) => ({
-    default: module.TemplatesPlaceholder,
-  }))
-);
+import { TemplatesRoute } from '@/components/templates/TemplatesRoute';
 
 function LazyRouteFallback() {
   return (
@@ -74,16 +70,7 @@ function App() {
               </PagePermissionGuard>
             }
           />
-          <Route
-            path="comms/templates"
-            element={
-              <PagePermissionGuard pageName="CommsTemplates" operation="read">
-                <Suspense fallback={<LazyRouteFallback />}>
-                  <TemplatesPlaceholder />
-                </Suspense>
-              </PagePermissionGuard>
-            }
-          />
+          <Route path="comms/templates" element={<TemplatesRoute />} />
           <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>
