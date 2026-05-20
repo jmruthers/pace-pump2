@@ -22,7 +22,7 @@
 | PUMP-01 — App shell & information architecture | - | done | CommRbac: inline `src/components/comms/CommRbacContextProvider.tsx` (2026-05-20) |
 | PUMP-04 — Template library | PUMP-01 |  |  |
 | PUMP-02 — Communications log home | PUMP-01 |  |  |
-| PUMP-03 — Platform-managed sender identity contract | PUMP-01 |  |  |
+| PUMP-03 — Platform-managed sender identity contract | PUMP-01 | done | Contract hook + RPC integration tests (2026-05-20) |
 | PUMP-05 — Compose & send | PUMP-01, PUMP-04 |  |  |
 | PUMP-06 — Webhooks & delivery pipeline (Edge-only) | PUMP-05 |  |  |
 | PUMP-07 — Send Pipeline Edge Implementation | PUMP-05, PUMP-06 |  |  |
@@ -52,7 +52,8 @@
 
 - authority: [`docs/requirements/PU03-sender-identity-contract-requirements.md`](../requirements/PU03-sender-identity-contract-requirements.md)
 - backend freeze: PU03 PASS per [`pump-backend-ready-report.md`](pump-backend-ready-report.md) — `pump_get_effective_sender_identity` RPC; **`pump_org_settings` FORCE RLS** (**DB-PUMP-001**)
-- contract-only: no standalone SPA merge per PU03 §1 / §14–§15; verification rolls into PUMP-05 compose consumption and PUMP Edge send-time validation
+- SPA contract: `useEffectivePumpSenderIdentity` + `src/lib/comms/senderIdentityContract*` (unit + live RPC integration tests; 7 integration cases skip without dev-db env)
+- contract-only UI: no compose banner yet — PUMP-05 consumes the hook; Edge send-time validation unchanged in pace-core2
 
 ### PUMP-05 — Compose & send
 
