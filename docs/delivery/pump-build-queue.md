@@ -21,7 +21,7 @@
 | --- | --- | --- | --- |
 | PUMP-01 — App shell & information architecture | - | done | CommRbac: inline `src/components/comms/CommRbacContextProvider.tsx` (2026-05-20) |
 | PUMP-04 — Template library | PUMP-01 | done | `046614c` + remediation; validate PASS; AC 17/17 — [acceptance status](PUMP-04-acceptance-status.md) |
-| PUMP-02 — Communications log home | PUMP-01 |  |  |
+| PUMP-02 — Communications log home | PUMP-01 | done | SPA + remediation (`listRefreshKey`, confirm `autoFocus`); validate green; AC [`PUMP-02-ac-status.md`](PUMP-02-ac-status.md); §12 manual QA pack [`PUMP-02-qa-pack.md`](../test-packs/PUMP-02-qa-pack.md) |
 | PUMP-03 — Platform-managed sender identity contract | PUMP-01 | done | SPA contract + AC trace 2026-05-20; AC-7 env-gated; AC-10/11 → PUMP-07 |
 | PUMP-05 — Compose & send | PUMP-01, PUMP-04 |  |  |
 | PUMP-06 — Webhooks & delivery pipeline (Edge-only) | PUMP-05 |  |  |
@@ -51,6 +51,9 @@
 - authority: [`docs/requirements/PU02-comms-log-home-requirements.md`](../requirements/PU02-comms-log-home-requirements.md)
 - backend freeze: PU02 PASS per [`pump-backend-ready-report.md`](pump-backend-ready-report.md) — read tables + RLS; draft DELETE; **`pump-cancel`** ACTIVE (**PUMP-EDGE-001**); cancel OR-rule (**PUMP-CODE-001**)
 - sub-passes (authority only): PUMP-02A read path, then PUMP-02B row actions — not separate queue rows
+- frontend: commit `b9051cd` on `cursor/8d67b09c` — `CommsLogHome`, filters, server-side table, drill-down, cancel/delete; `npm run validate` green after remediation
+- AC tracking: [`PUMP-02-ac-status.md`](PUMP-02-ac-status.md)
+- QA pack: [`docs/test-packs/PUMP-02-qa-pack.md`](../test-packs/PUMP-02-qa-pack.md)
 
 ### PUMP-03 — Platform-managed sender identity contract
 

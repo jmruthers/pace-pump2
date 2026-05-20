@@ -747,6 +747,8 @@ Standard PDLC proxy rules apply. PUMP-02 does not introduce a slice-specific pro
 
 ## 11. Acceptance criteria
 
+Implementation status (2026-05-20): see [`docs/delivery/PUMP-02-ac-status.md`](../delivery/PUMP-02-ac-status.md).
+
 ### A. Read path
 
 1. **Given** an authenticated operator with `read:page.CommsLog` and at least one non-draft `pump_message` row in their organisation, **when** they navigate to `/`, **then** the list view renders the six-column DataTable with one row per visible message, sorted by `(sent_at NULLS LAST, created_at, id)` DESC. (Traces §4 items 1–4, 14–24.)
