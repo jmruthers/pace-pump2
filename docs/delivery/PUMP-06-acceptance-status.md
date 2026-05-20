@@ -4,8 +4,8 @@ Authority: [PU06-webhooks-delivery-pipeline-requirements.md](../requirements/PU0
 
 Delivery:
 
-- pace-core2 Edge: commit `511a33a` on `cursor/7d3896e4` — `pump-webhook-logic.ts`, `handleWebhook` in `pump-edge.ts`
-- pace-pump2 tests: commit `4743796` on `cursor/7d3896e4` — `src/lib/webhook/*.test.ts`
+- pace-core2 Edge: `511a33a` + verify exports; **deployed** `pump-webhook` **v3** on `yihzsfcceciimdoiibif` (2026-05-20, `verify_jwt: false`)
+- pace-pump2 tests: `4743796` + `pumpWebhookSignature.test.ts`, G5 engagement orchestration on `cursor/7d3896e4`
 
 Legend: **Auto** = covered by unit/contract tests in CI; **Code** = implemented in Edge handler, not yet proven on live dev-db; **Manual** = §12 operator replay against `yihzsfcceciimdoiibif` pending.
 
@@ -53,12 +53,12 @@ Legend: **Auto** = covered by unit/contract tests in CI; **Code** = implemented 
 | --- | --- | --- | --- |
 | 1 | BR-N1 mapping conformance | Complete | `pumpWebhookMapping.test.ts` (all Resend + Twilio rows) |
 | 2 | Idempotency triple replay | Complete | `pumpWebhookIdempotency.test.ts` |
-| 3 | Concurrent dedupe race | Partial | Same file (in-memory lock; not Postgres UNIQUE) |
+| 3 | Concurrent dedupe race | Partial | In-memory race in `pumpWebhookIdempotency.test.ts`; G4 integration skipped until live env |
 | 4 | Precedence lattice | Complete | `pumpWebhookPrecedence.test.ts` |
 | 5 | First-only engagement | Complete | `pumpWebhookEngagement.test.ts` |
 | 6 | Suppression channel derivation | Complete | `pumpWebhookSuppression.test.ts` |
 | 7 | No-match no-write | Complete | `pumpWebhookIngress.test.ts` |
-| 8 | Signature-failure no-write | Partial | Contract test only; no HTTP 401 integration test |
+| 8 | Signature-failure no-write | Complete | `pumpWebhookSignature.test.ts` (crypto verify) + live 401 without headers |
 | 9 | Edge-log no-match | Complete | `pumpWebhookIngress.test.ts` |
 
 ## §15 Done criteria
@@ -68,7 +68,7 @@ Legend: **Auto** = covered by unit/contract tests in CI; **Code** = implemented 
 | §11 pass on deployed `pump-webhook/{gateway}` on dev-db | Pending — redeploy + §12 |
 | §13 suites pass on CI | Complete — `npm run validate` PASS (163 tests) |
 | BR-N1 single source in handler code | Complete — `pump-webhook-logic.ts` |
-| Edge deployed with this implementation | Pending — see remediation |
+| Edge deployed with this implementation | Complete — `pump-webhook` v3 on `yihzsfcceciimdoiibif` |
 
 ## §12 Manual verification
 
@@ -76,14 +76,14 @@ Target dev-db: `yihzsfcceciimdoiibif` (per backend-ready report)
 
 | Step | Result | Notes |
 | --- | --- | --- |
-| 1 Resend delivered fixture | Pending | Needs seeded `gateway_message_id` |
-| 2 Invalid signature 401 | Pending | |
-| 3 Duplicate replay | Pending | |
-| 4 Twilio delivered | Pending | |
-| 5 Twilio duplicate + 21610 suppression once | Pending | |
-| 6 Unknown gateway 404 | Pending | |
-| 7 Malformed payload 400/401 | Pending | |
-| 8 No-match + Edge log | Pending | |
+| 1 Resend delivered fixture | Blocked | `pump_gateway_config` has no signing secrets on target; 0 recipients with `gateway_message_id` |
+| 2 Invalid signature 401 | Pass | HTTP POST `/resend` without Svix headers → **401** (deployed v3) |
+| 3 Duplicate replay | Blocked | Requires valid signed fixture (G1 config) |
+| 4 Twilio delivered | Blocked | No `auth_token` in gateway config on target |
+| 5 Twilio duplicate + 21610 | Blocked | Same |
+| 6 Unknown gateway 404 | Pass | POST `/sendgrid` → **404** |
+| 7 Malformed payload 400/401 | Pass | Truncated JSON → **401** (no valid sig/config); acceptable per PU06 §12.7 |
+| 8 No-match + Edge log | Blocked | Unsigned/tampered requests return **401** before correlation |
 | 9 Delivered from queued | Pending | |
 | 10 First-only opened (two svix-id) | Pending | |
 | 11 Hard-bounce upsert | Pending | |

@@ -7,12 +7,16 @@ Tracking: [PUMP-06-acceptance-status.md](PUMP-06-acceptance-status.md)
 ## Closed in this delivery
 
 - Edge handler `handleWebhook` + `pump-webhook-logic.ts` (BR-N1, BR-D1–D3, BR-Precedence, BR-Suppression, BR-A12, BR-N2, BR-D-NoMatch logging)
-- pace-pump2 §13 unit/contract suites (9/9 items; items 3 and 8 partial — see below)
+- pace-pump2 §13 unit/contract suites (9/9 items; item 3 partial — in-memory race only)
 - `npm run validate` PASS on `cursor/7d3896e4`
+- **G1** — `pump-webhook` **v3** deployed to `yihzsfcceciimdoiibif` (2026-05-20)
+- **G3** — `pumpWebhookSignature.test.ts` + exported `verifyResendWebhookSignature` / `buildResendSvixSignatureHeader`
+- **G5** — second-open orchestration test in `pumpWebhookEngagement.test.ts`
+- **G8** — PU06 §1 Status updated to Built (pending signed §12)
 
 ## Open gaps (ordered)
 
-### G1 — Deploy updated Edge to dev-db (blocks §11 / §15 / §12)
+### G1 — Deploy updated Edge to dev-db (blocks §11 / §15 / §12) — CLOSED
 
 **Requirement:** §15, §12, §11 live evidence on `pump-webhook/{gateway}`.
 
@@ -26,9 +30,13 @@ Tracking: [PUMP-06-acceptance-status.md](PUMP-06-acceptance-status.md)
 
 **Owner:** Platform / pace-core2 deploy lane.
 
-### G2 — §12 manual QA pack execution
+### G2 — §12 manual QA pack execution — PARTIAL (2026-05-20)
 
 **Requirement:** §12 steps 1–18.
+
+**Done:** HTTP smoke on deployed v3 — step 2 (401), 6 (404), 7 (malformed → 401). Recorded in acceptance status §12.
+
+**Blocked:** Steps 1, 3–5, 8–18 need `webhook_secret` / `auth_token` in `pump_gateway_config` and seeded `gateway_message_id`.
 
 **Remediation:**
 
@@ -39,7 +47,7 @@ Tracking: [PUMP-06-acceptance-status.md](PUMP-06-acceptance-status.md)
 
 **Owner:** Operator / integration reviewer.
 
-### G3 — §13.8 Signature-failure HTTP integration test
+### G3 — §13.8 Signature-failure HTTP integration test — CLOSED
 
 **Requirement:** Tampered signature → 401, zero DB writes.
 
@@ -52,17 +60,17 @@ Tracking: [PUMP-06-acceptance-status.md](PUMP-06-acceptance-status.md)
 
 **Estimate:** Small (1 test file in pace-core2 or pace-pump2).
 
-### G4 — §13.3 Concurrent race against real UNIQUE constraint
+### G4 — §13.3 Concurrent race against real UNIQUE constraint — PLACEHOLDER
 
 **Requirement:** Two parallel requests, one INSERT, one duplicate at DB layer.
 
-**Current state:** `pumpWebhookIdempotency.test.ts` uses in-memory `Set`.
+**Current state:** `pumpWebhookDbRace.integration.test.ts` (skipped without env); in-memory race in `pumpWebhookIdempotency.test.ts`.
 
 **Remediation:** Optional integration test against local Supabase or dev-db fixture table with `(gateway, dedupe_key)` UNIQUE — run in CI only when `SUPABASE_SERVICE_ROLE_KEY` present (same pattern as PUMP-03 integration skip).
 
 **Priority:** Low (logic + UNIQUE handling already coded).
 
-### G5 — AC-06B-10 second `email.opened` delivery-event row
+### G5 — AC-06B-10 second `email.opened` delivery-event row — CLOSED
 
 **Requirement:** Second open with different `svix-id` inserts second `pump_delivery_event`, does not change `opened_at`.
 
