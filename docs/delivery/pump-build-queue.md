@@ -23,7 +23,7 @@
 | PUMP-04 — Template library | PUMP-01 | done | `046614c` + remediation; validate PASS; AC 17/17 — [acceptance status](PUMP-04-acceptance-status.md) |
 | PUMP-02 — Communications log home | PUMP-01 | done | SPA + remediation (`listRefreshKey`, confirm `autoFocus`); validate green; AC [`PUMP-02-ac-status.md`](PUMP-02-ac-status.md); §12 manual QA pack [`PUMP-02-qa-pack.md`](../test-packs/PUMP-02-qa-pack.md) |
 | PUMP-03 — Platform-managed sender identity contract | PUMP-01 | done | SPA contract + AC trace 2026-05-20; AC-7 env-gated; AC-10/11 → PUMP-07 |
-| PUMP-05 — Compose & send | PUMP-01, PUMP-04 |  |  |
+| PUMP-05 — Compose & send | PUMP-01, PUMP-04 | done | SPA `05ac85a`; 24/29 AC automated; §12 in-app pending — [acceptance status](PUMP-05-acceptance-status.md) |
 | PUMP-06 — Webhooks & delivery pipeline (Edge-only) | PUMP-05 |  |  |
 | PUMP-07 — Send Pipeline Edge Implementation | PUMP-05, PUMP-06 |  |  |
 
@@ -69,7 +69,11 @@
 - authority: [`docs/requirements/PU05-compose-send-requirements.md`](../requirements/PU05-compose-send-requirements.md)
 - backend freeze: PU05 PASS per [`pump-backend-ready-report.md`](pump-backend-ready-report.md) — draft `pump_message` RLS; six send-path Edge slugs ACTIVE (`pump-resolve-pool`, `pump-send`, `pump-schedule`, `pump-send-test`, `pump-load-templates`, `pump-load-merge-fields`); schedule UX deferred per PU07
 - authority contract (Evidence): PUMP-03 sender-identity RPC — frozen PASS; omitted from runtime `depends_on`
-- operational gates (non-blocking at init): PU05 §15 pace-core2 `@solvera/pace-core/comms` export, CommComposer Save Draft, typeahead — implementation/QA obligations while backend gate PASS
+- delivery: commit `05ac85a` on `cursor/e1a4c702` — `/comms/create` compose stack, hooks, lib, tests, [`PUMP-05-qa-pack.md`](../test-packs/PUMP-05-qa-pack.md)
+- validation: `npm run validate` PASS (post-remediation)
+- acceptance: §11 — **24/29 automated** — [PUMP-05-acceptance-status.md](PUMP-05-acceptance-status.md); remediation [PUMP-05-remediation-plan.md](PUMP-05-remediation-plan.md)
+- pace-core: linked `file:../pace-core2/packages/core` — Save draft in source; rebuild `dist` required for runtime
+- manual QA: §12 pending (`yihzsfcceciimdoiibif`)
 - sub-passes (authority only): PUMP-05A composer mount + draft path; PUMP-05B send / schedule / send-test — not separate queue rows
 
 ### PUMP-06 — Webhooks & delivery pipeline (Edge-only)
