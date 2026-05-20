@@ -1,0 +1,50 @@
+{
+  "name": "pace-pump2",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "setup": "node node_modules/@solvera/pace-core/scripts/setup.cjs",
+    "validate": "node node_modules/@solvera/pace-core/scripts/validate.cjs",
+    "validate-authority": "node node_modules/@solvera/pace-core/scripts/validate-authority.cjs",
+    "env:dev": "node node_modules/@solvera/pace-core/scripts/switch-supabase-env.cjs dev",
+    "env:prod": "node node_modules/@solvera/pace-core/scripts/switch-supabase-env.cjs prod",
+    "env:status": "node -e \"const fs=require('node:fs');const p='.env';if(!fs.existsSync(p)){console.log('.env not found');process.exit(0);}const t=fs.readFileSync(p,'utf8');const g=(k)=>{const m=t.match(new RegExp('^'+k+'=(.*)$','m'));return m?m[1]:''};console.log('SUPABASE_ENV='+g('SUPABASE_ENV'));console.log('SUPABASE_PROJECT_REF='+g('SUPABASE_PROJECT_REF'));console.log('VITE_SUPABASE_URL='+g('VITE_SUPABASE_URL'));\"",
+    "migrate:link": "node node_modules/@solvera/pace-core/scripts/supabase-link-from-env.cjs",
+    "migrate:link:dev": "node node_modules/@solvera/pace-core/scripts/supabase-link-from-env.cjs dev",
+    "migrate:link:prod": "node node_modules/@solvera/pace-core/scripts/supabase-link-from-env.cjs prod"
+  },
+  "dependencies": {
+    "@solvera/pace-core": "file:../pace-core2/packages/core",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^6.0.0 || ^7.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "@supabase/supabase-js": "^2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.12",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "eslint-plugin-react": "^7.37.0",
+    "vitest": "^2.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "@vitest/coverage-istanbul": "^2.0.0"
+  }
+}
