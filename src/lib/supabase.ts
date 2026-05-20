@@ -1,8 +1,6 @@
 /**
- * Base Supabase client for UnifiedAuthProvider only.
- * Components must use useSecureSupabase() from pace-core for queries.
- * When VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are not set, a no-op placeholder
- * is exported so the app still runs (auth and org features will be inactive).
+ * Base Supabase client for UnifiedAuthProvider and setupRBAC only.
+ * Runtime data access must use useSecureSupabase() from pace-core.
  */
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -10,8 +8,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '';
 
-const hasConfig = Boolean(supabaseUrl && supabasePublishableKey);
+if (!supabaseUrl || !supabasePublishableKey) {
+  throw new Error(
+    'Missing Supabase environment variables. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are set in your .env file.'
+  );
+}
 
-export const supabaseClient: SupabaseClient = hasConfig
-  ? createClient(supabaseUrl, supabasePublishableKey)
-  : ({} as SupabaseClient);
+export const supabaseClient: SupabaseClient = createClient(supabaseUrl, supabasePublishableKey);

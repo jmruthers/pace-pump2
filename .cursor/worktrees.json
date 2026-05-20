@@ -1,0 +1,12 @@
+{
+  "setup-worktree-unix": [
+    "ln -sfn \"$(dirname \"$ROOT_WORKTREE_PATH\")/pace-core2\" \"$(dirname \"$(pwd)\")/pace-core2\"",
+    "npm ci",
+    "cp \"$ROOT_WORKTREE_PATH/.env\" .env 2>/dev/null || cp \"$ROOT_WORKTREE_PATH/.env.example\" .env"
+  ],
+  "setup-worktree-windows": [
+    "if not exist \"%ROOT_WORKTREE_PATH%\\..\\pace-core2\" (echo pace-core2 not found beside main repo root && exit /b 1)",
+    "npm ci",
+    "copy /Y \"%ROOT_WORKTREE_PATH%\\.env\" .env 2>nul || copy /Y \"%ROOT_WORKTREE_PATH%\\.env.example\" .env"
+  ]
+}
