@@ -25,7 +25,7 @@
 | PUMP-02 — Communications log home                   | PUMP-01          | built  | SPA + remediation (`listRefreshKey`, confirm `autoFocus`); validate green; AC `[PUMP-02-ac-status.md](PUMP-02-ac-status.md)`; §12 manual QA pack `[PUMP-02-qa-pack.md](../test-packs/PUMP-02-qa-pack.md)` |
 | PUMP-03 — Platform-managed sender identity contract | PUMP-01          | built  | SPA contract + AC trace 2026-05-20; AC-7 env-gated; AC-10/11 → PUMP-07                                                                                                                                    |
 | PUMP-05 — Compose & send                            | PUMP-01, PUMP-04 | built  | SPA `05ac85a`; 24/29 AC automated; §12 in-app pending — [acceptance status](PUMP-05-acceptance-status.md)                                                                                                 |
-| PUMP-06 — Webhooks & delivery pipeline (Edge-only)  | PUMP-05          |        |                                                                                                                                                                                                           |
+| PUMP-06 — Webhooks & delivery pipeline (Edge-only)  | PUMP-05          | built  | Edge `511a33a` + tests `4743796`; 17/19 §11 Auto; §12 manual pending — [acceptance status](PUMP-06-acceptance-status.md)                                                                                  |
 | PUMP-07 — Send Pipeline Edge Implementation         | PUMP-05, PUMP-06 |        |                                                                                                                                                                                                           |
 
 
@@ -81,9 +81,15 @@
 ### PUMP-06 — Webhooks & delivery pipeline (Edge-only)
 
 - authority: `[docs/requirements/PU06-webhooks-delivery-pipeline-requirements.md](../requirements/PU06-webhooks-delivery-pipeline-requirements.md)`
-- backend freeze: PU06 PASS per `[pump-backend-ready-report.md](pump-backend-ready-report.md)` — `**pump-webhook`** ACTIVE (`verify_jwt: false`, **PUMP-EDGE-001**); dedupe indexes
-- implementation lane: pace-core2 Edge — `packages/core/supabase/functions/pump-webhook` (per backend report); no SPA route
-- doc drift (non-blocking): PU06 §8/§15 “Edge ABSENT” text stale vs MCP 2026-05-20
+- backend freeze: PU06 PASS per `[pump-backend-ready-report.md](pump-backend-ready-report.md)` — `**pump-webhook`** ACTIVE (`verify_jwt: false`, **PUMP-EDGE-001**); dedupe indexes on `yihzsfcceciimdoiibif`
+- implementation lane: pace-core2 Edge — `packages/core/supabase/functions/pump-webhook` + `_shared/pump-webhook-logic.ts`; pace-pump2 contract tests only (no SPA route)
+- delivery: pace-core2 `511a33a`, pace-pump2 `4743796` on `cursor/7d3896e4`
+- validation: `npm run validate` PASS — 163 tests; webhook suites in `src/lib/webhook/`
+- acceptance: §11 — **17/19 automated** (logic/contract); **0/19 live dev-db** — [PUMP-06-acceptance-status.md](PUMP-06-acceptance-status.md); remediation [PUMP-06-remediation-plan.md](PUMP-06-remediation-plan.md)
+- §13 testing: **9/9** items in CI (items 3 and 8 partial — in-memory race, signature contract-only)
+- manual QA: §12 pending — [PUMP-06-qa-pack.md](../test-packs/PUMP-06-qa-pack.md); **blocker:** redeploy Edge with `511a33a` before replay (remediation G1)
+- pace-core: merge `cursor/7d3896e4` on pace-core2 required for linked `file:../pace-core2` consumers
+- doc drift (non-blocking): PU06 §1 Status / §15 “Edge not deployed” stale vs backend-ready MCP 2026-05-20; update when §12 completes
 
 ### PUMP-07 — Send Pipeline Edge Implementation
 
