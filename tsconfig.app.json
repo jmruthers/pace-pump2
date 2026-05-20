@@ -7,7 +7,10 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@pump-webhook-logic": [
+        "../pace-core2/packages/core/supabase/functions/_shared/pump-webhook-logic.ts"
+      ]
     },
     "strict": true,
     "noImplicitAny": true,

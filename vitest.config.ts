@@ -11,6 +11,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(process.cwd(), 'src'),
+      '@pump-webhook-logic': path.resolve(
+        process.cwd(),
+        '../pace-core2/packages/core/supabase/functions/_shared/pump-webhook-logic.ts'
+      ),
     },
     dedupe: ['react', 'react-dom', 'react-router-dom'],
   },
