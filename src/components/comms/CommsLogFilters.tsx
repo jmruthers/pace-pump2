@@ -68,13 +68,17 @@ export function CommsLogFilters({
       <DatePickerWithTimezone
         placeholder="From"
         value={state.from != null ? new Date(`${state.from}T12:00:00`) : null}
-        onChange={(date) => onFromChange(dateYmdFromDate(date))}
+        onChange={(date) =>
+          onFromChange(date != null ? dateYmdFromDate(date) : null)
+        }
       />
 
       <DatePickerWithTimezone
         placeholder="To"
         value={state.to != null ? new Date(`${state.to}T12:00:00`) : null}
-        onChange={(date) => onToChange(dateYmdFromDate(date))}
+        onChange={(date) =>
+          onToChange(date != null ? dateYmdFromDate(date) : null)
+        }
       />
 
       <Button

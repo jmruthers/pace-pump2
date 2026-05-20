@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import {
   Card,
   Dialog,
@@ -9,19 +8,13 @@ import {
   DialogTitle,
   LoadingSpinner,
 } from '@solvera/pace-core/components';
-import { toast } from '@solvera/pace-core/components';
 import {
   deliveryEventFailureReason,
   formatShortDateTime,
-  isValidUuid,
   subjectLine,
 } from '@/lib/comms/commsLogFormat.js';
 import type { PumpMessageRow } from '@/lib/comms/commsLogTypes.js';
-import {
-  usePumpDeliveryEvents,
-  usePumpMessageById,
-  usePumpMessageRecipients,
-} from '@/hooks/comms/usePumpMessageDrillDown.js';
+import { useCommsLogDrillDown } from '@/hooks/comms/useCommsLogDrillDown.js';
 import { ChannelBadge, MessageStatusBadge, RecipientStatusBadge } from './commsLogBadges.js';
 import { CommsLogStatePanel } from './CommsLogStatePanel.js';
 
@@ -45,49 +38,16 @@ export function CommsLogDrillDownDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const recipientsErrorShown = useRef(false);
-  const eventsErrorShown = useRef(false);
-
-  const malformed = messageId != null && !isValidUuid(messageId);
-  const canLoad = open && messageId != null && isValidUuid(messageId);
-
-  const messageQuery = usePumpMessageById(messageId, canLoad && cachedRow == null);
-  const recipientsQuery = usePumpMessageRecipients(messageId, canLoad);
-  const eventsQuery = usePumpDeliveryEvents(messageId, canLoad);
-
-  const row = cachedRow ?? messageQuery.data ?? null;
-  const notFound =
-    malformed ||
-    (canLoad &&
-      !messageQuery.isLoading &&
-      cachedRow == null &&
-      messageQuery.data == null);
-
-  useEffect(() => {
-    if (recipientsQuery.isError && !recipientsErrorShown.current) {
-      recipientsErrorShown.current = true;
-      toast({
-        variant: 'destructive',
-        title: recipientsQuery.error?.message ?? "Couldn't load recipient details.",
-      });
-    }
-    if (!recipientsQuery.isError) {
-      recipientsErrorShown.current = false;
-    }
-  }, [recipientsQuery.isError, recipientsQuery.error]);
-
-  useEffect(() => {
-    if (eventsQuery.isError && !eventsErrorShown.current) {
-      eventsErrorShown.current = true;
-      toast({
-        variant: 'destructive',
-        title: eventsQuery.error?.message ?? "Couldn't load delivery events.",
-      });
-    }
-    if (!eventsQuery.isError) {
-      eventsErrorShown.current = false;
-    }
-  }, [eventsQuery.isError, eventsQuery.error]);
+  const {
+    row,
+    notFound,
+    messageLoadError,
+    recipientsQuery,
+    eventsQuery,
+    retryMessage,
+    retryRecipients,
+    retryEvents,
+  } = useCommsLogDrillDown({ messageId, cachedRow, open });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,6 +85,12 @@ export function CommsLogDrillDownDialog({
         <DialogBody>
           {notFound ? (
             <p>Message not found or not visible.</p>
+          ) : messageLoadError ? (
+            <CommsLogStatePanel
+              message="Couldn't load message details."
+              actionLabel="Retry"
+              onAction={retryMessage}
+            />
           ) : (
             <>
               <section className="grid gap-2">
@@ -135,7 +101,7 @@ export function CommsLogDrillDownDialog({
                   <CommsLogStatePanel
                     message="Couldn't load recipient details."
                     actionLabel="Retry"
-                    onAction={() => void recipientsQuery.refetch()}
+                    onAction={retryRecipients}
                   />
                 ) : recipientsQuery.data != null && recipientsQuery.data.length === 0 ? (
                   <p>No recipients on this message yet.</p>
@@ -207,7 +173,7 @@ export function CommsLogDrillDownDialog({
                   <CommsLogStatePanel
                     message="Couldn't load delivery events."
                     actionLabel="Retry"
-                    onAction={() => void eventsQuery.refetch()}
+                    onAction={retryEvents}
                   />
                 ) : eventsQuery.data != null && eventsQuery.data.length === 0 ? (
                   <p>No delivery events recorded yet.</p>
