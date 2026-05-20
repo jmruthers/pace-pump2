@@ -26,12 +26,7 @@ const CommsLogPlaceholder = lazy(() =>
   }))
 );
 
-const ComposePlaceholder = lazy(() =>
-  import('@/components/shell/ComposePlaceholder').then((module) => ({
-    default: module.ComposePlaceholder,
-  }))
-);
-
+import { ComposeRoute } from '@/components/compose/ComposeRoute';
 import { TemplatesRoute } from '@/components/templates/TemplatesRoute';
 
 function LazyRouteFallback() {
@@ -64,9 +59,7 @@ function App() {
             path="comms/create"
             element={
               <PagePermissionGuard pageName="CommsLog" operation="create">
-                <Suspense fallback={<LazyRouteFallback />}>
-                  <ComposePlaceholder />
-                </Suspense>
+                <ComposeRoute />
               </PagePermissionGuard>
             }
           />

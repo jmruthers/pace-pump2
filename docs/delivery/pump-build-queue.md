@@ -23,7 +23,7 @@
 | PUMP-04 — Template library | PUMP-01 | done | `046614c` + remediation; validate PASS; AC 17/17 — [acceptance status](PUMP-04-acceptance-status.md) |
 | PUMP-02 — Communications log home | PUMP-01 |  |  |
 | PUMP-03 — Platform-managed sender identity contract | PUMP-01 | done | SPA contract + AC trace 2026-05-20; AC-7 env-gated; AC-10/11 → PUMP-07 |
-| PUMP-05 — Compose & send | PUMP-01, PUMP-04 |  |  |
+| PUMP-05 — Compose & send | PUMP-01, PUMP-04 | done | Compose page + pace-core Save draft; validate PASS |
 | PUMP-06 — Webhooks & delivery pipeline (Edge-only) | PUMP-05 |  |  |
 | PUMP-07 — Send Pipeline Edge Implementation | PUMP-05, PUMP-06 |  |  |
 
