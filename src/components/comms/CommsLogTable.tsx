@@ -155,12 +155,18 @@ export function CommsLogTable({
         sortDir,
       });
       try {
-        const response = await fetchPumpMessageList(
+        const result = await fetchPumpMessageList(
           supabase,
           organisationId,
           searchState,
           params
         );
+        if (!result.ok) {
+          const normalized = new Error(result.error.message);
+          onFetchError(normalized);
+          throw normalized;
+        }
+        const response = result.data;
         onFetchSuccess(response.data, response.totalCount);
         return response;
       } catch (error) {

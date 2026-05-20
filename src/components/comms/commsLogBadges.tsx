@@ -1,6 +1,6 @@
 import { Badge } from '@solvera/pace-core/components';
 import type { CommChannel, CommMessageStatus, CommRecipientStatus } from '@solvera/pace-core/comms';
-import { Mail, Phone } from 'lucide-react';
+import { Mail, Phone } from '@solvera/pace-core/icons';
 
 export function ChannelBadge({ channel }: { channel: CommChannel }) {
   if (channel === 'sms') {

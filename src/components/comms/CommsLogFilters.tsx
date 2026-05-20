@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@solvera/pace-core/components';
 import type { CommChannel, CommMessageStatus } from '@solvera/pace-core/comms';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw } from '@solvera/pace-core/icons';
 import { dateYmdFromDate } from '@/lib/comms/commsLogSearchParams.js';
 import { MESSAGE_STATUS_OPTIONS } from '@/lib/comms/commsLogTypes.js';
 import type { CommsLogSearchState } from '@/lib/comms/commsLogTypes.js';

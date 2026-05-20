@@ -1,5 +1,7 @@
 import type { RBACSupabaseClient } from '@solvera/pace-core/rbac';
 import type { ServerSideParams, ServerSideResponse } from '@solvera/pace-core/components';
+import type { ApiResult } from '@solvera/pace-core/types';
+import { createErrorResult, createSuccessResult } from '@solvera/pace-core/types';
 import { localDayBoundsIso } from './commsLogFormat.js';
 import type { CommsLogSearchState, PumpMessageRow } from './commsLogTypes.js';
 import { PUMP_MESSAGE_LIST_COLUMNS } from './commsLogTypes.js';
@@ -80,7 +82,7 @@ export async function fetchPumpMessageList(
   organisationId: string,
   search: CommsLogSearchState,
   params: ServerSideParams
-): Promise<ServerSideResponse<PumpMessageRow>> {
+): Promise<ApiResult<ServerSideResponse<PumpMessageRow>>> {
   const pageSize = normalizePageSize(params.pageSize);
   const sortDir = sortDirFromTableParams(params.sorting);
   const pageIndex = Math.max(0, params.pageIndex);
@@ -106,16 +108,16 @@ export async function fetchPumpMessageList(
   ]);
 
   if (listResult.error != null) {
-    throw listResult.error;
+    return createErrorResult('PUMP_MESSAGE_LIST_FAILED', listResult.error.message);
   }
   if (countResult.error != null) {
-    throw countResult.error;
+    return createErrorResult('PUMP_MESSAGE_LIST_COUNT_FAILED', countResult.error.message);
   }
 
   const totalCount = countResult.count ?? 0;
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  return {
+  return createSuccessResult({
     data: (listResult.data ?? []) as PumpMessageRow[],
     totalCount,
     pageIndex,
@@ -123,5 +125,5 @@ export async function fetchPumpMessageList(
     pageCount,
     hasNextPage: pageIndex < pageCount - 1,
     hasPreviousPage: pageIndex > 0,
-  };
+  });
 }
