@@ -26,7 +26,7 @@
 | PUMP-03 — Platform-managed sender identity contract | PUMP-01          | built  | SPA contract + AC trace 2026-05-20; AC-7 env-gated; AC-10/11 → PUMP-07                                                                                                                                    |
 | PUMP-05 — Compose & send                            | PUMP-01, PUMP-04 | built  | SPA `05ac85a`; 24/29 AC automated; §12 in-app pending — [acceptance status](PUMP-05-acceptance-status.md)                                                                                                 |
 | PUMP-06 — Webhooks & delivery pipeline (Edge-only)  | PUMP-05          | built  | Edge deployed v3; §13 complete; §12 partial (secrets/seed data) — [acceptance status](PUMP-06-acceptance-status.md)                                                                                         |
-| PUMP-07 — Send Pipeline Edge Implementation         | PUMP-05, PUMP-06 |        |                                                                                                                                                                                                           |
+| PUMP-07 — Send Pipeline Edge Implementation         | PUMP-05, PUMP-06 | built  | Code complete; Edge redeploy + §12 manual QA pending — [acceptance status](PUMP-07-acceptance-status.md)                                                                                                    |
 
 
 ## Evidence
@@ -95,8 +95,10 @@
 - authority: `[docs/requirements/PU07-send-pipeline-edge-requirements.md](../requirements/PU07-send-pipeline-edge-requirements.md)`
 - backend freeze: PU07 PASS per `[pump-backend-ready-report.md](pump-backend-ready-report.md)` — `pump-resolve-pool`, `pump-send`, `pump-send-test` ACTIVE; no new DDL
 - authority contract (Evidence): PUMP-03 `pump_get_effective_sender_identity` RPC — frozen PASS; omitted from runtime `depends_on`
-- implementation lane: pace-core2 Edge — `packages/core/supabase/functions/pump-resolve-pool`, `pump-send`, `pump-send-test` (per backend report)
+- implementation lane: pace-core2 — `pump-edge-http.ts`, `pump-runtime-bootstrap.ts`, `src/comms/pump-gateway.ts`, `src/comms/pump-pool-resolution.ts`, `edge-service.ts` orchestration; entrypoints delegate to `pump-edge-http`
+- validation: `npm run validate` PASS pace-core2 `packages/core` + pace-pump2 (2026-05-21)
+- acceptance: §10 **10/14 Auto** at unit layer — [PUMP-07-acceptance-status.md](PUMP-07-acceptance-status.md); remediation [PUMP-07-remediation-plan.md](PUMP-07-remediation-plan.md)
+- manual QA: §12 pending — [PUMP-07-qa-pack.md](../test-packs/PUMP-07-qa-pack.md); **blockers:** redeploy send-path Edge (G1), seed `pump_gateway_config` (G2)
+- schema note: additional contacts via `core_contact.permission_type` (`full`/`notify`), not `core_additional_contact` (PU07 doc drift G4)
 - sequencing: after PUMP-06 for `gateway_message_id` webhook correlation handoff per PU07 §15 / PU05 §15
-- package gates (non-blocking at init): PU07 §15 `core_additional_contact` structure verification; `PumpStoreCreateRecipientInput` / `gatewayMessageId` forwarding in `edge-service.ts` — per backend report package/implementation gates, Edge slugs ACTIVE on target
-- doc drift (non-blocking): PU07 §8/§15 “Edge ABSENT” text stale vs MCP 2026-05-20
 
