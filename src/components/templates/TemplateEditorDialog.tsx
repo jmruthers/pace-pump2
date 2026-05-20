@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,14 @@ export function TemplateEditorDialog({
   onSave,
   isSaving,
 }: TemplateEditorDialogProps) {
+  const formMethodsRef = useRef<{
+    setError: (
+      name: keyof TemplateFormSchemaValues,
+      error: { type?: string; message: string }
+    ) => void;
+    clearErrors: () => void;
+  } | null>(null);
+
   useEffect(() => {
     if (!open) {
       return undefined;
@@ -46,13 +54,22 @@ export function TemplateEditorDialog({
 
   const handleSubmit = async (values: TemplateFormSchemaValues) => {
     const result = validateTemplateForm(values);
+    const methods = formMethodsRef.current;
     if (!result.success) {
+      methods?.clearErrors();
+      for (const [key, message] of Object.entries(result.errors)) {
+        methods?.setError(key as keyof TemplateFormSchemaValues, {
+          type: 'manual',
+          message,
+        });
+      }
       toast({
         variant: 'destructive',
         title: 'Fix the highlighted fields before saving.',
       });
       return;
     }
+    methods?.clearErrors();
     try {
       await onSave(values);
     } catch (saveError: unknown) {
@@ -75,15 +92,21 @@ export function TemplateEditorDialog({
           onSubmit={handleSubmit}
           className="grid gap-4"
         >
-          {(methods) => (
-            <TemplateEditorFields
-              watch={methods.watch}
-              setValue={methods.setValue}
-              canUpdateStrictMode={canUpdateStrictMode}
-              isSaving={isSaving}
-              onCancel={() => onOpenChange(false)}
-            />
-          )}
+          {(methods) => {
+            formMethodsRef.current = {
+              setError: methods.setError,
+              clearErrors: methods.clearErrors,
+            };
+            return (
+              <TemplateEditorFields
+                watch={methods.watch}
+                setValue={methods.setValue}
+                canUpdateStrictMode={canUpdateStrictMode}
+                isSaving={isSaving}
+                onCancel={() => onOpenChange(false)}
+              />
+            );
+          }}
         </Form>
       </DialogContent>
     </Dialog>

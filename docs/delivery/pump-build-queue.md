@@ -20,7 +20,7 @@
 | slice_id | depends_on | status | blocker_reason |
 | --- | --- | --- | --- |
 | PUMP-01 — App shell & information architecture | - | done | CommRbac: inline `src/components/comms/CommRbacContextProvider.tsx` (2026-05-20) |
-| PUMP-04 — Template library | PUMP-01 |  |  |
+| PUMP-04 — Template library | PUMP-01 | done | `046614c` + remediation; validate PASS; AC 17/17 — [acceptance status](PUMP-04-acceptance-status.md) |
 | PUMP-02 — Communications log home | PUMP-01 |  |  |
 | PUMP-03 — Platform-managed sender identity contract | PUMP-01 |  |  |
 | PUMP-05 — Compose & send | PUMP-01, PUMP-04 |  |  |
@@ -41,6 +41,10 @@
 - authority: [`docs/requirements/PU04-template-library-requirements.md`](../requirements/PU04-template-library-requirements.md)
 - backend freeze: PU04 PASS per [`pump-backend-ready-report.md`](pump-backend-ready-report.md) — `pump_organisation_templates` authenticated RLS (DB-410)
 - sequencing: [`pump-architecture.md`](../requirements/pump-architecture.md) § Implementation order — templates before comms log read-path validation
+- delivery: commit `046614c` on `cursor/c43ae609` — `/comms/templates` CRUD UI, hooks, lib helpers, tests, [`PUMP-04-qa-pack.md`](../test-packs/PUMP-04-qa-pack.md)
+- validation: `npm run validate` PASS (2026-05-20) — authority, type-check, lint, build, tests, pace-core audit
+- acceptance: §11 — **17/17 complete** — [PUMP-04-acceptance-status.md](PUMP-04-acceptance-status.md); remediation in [PUMP-04-remediation-plan.md](PUMP-04-remediation-plan.md)
+- manual QA: §12 verification steps pending (dev-db `yihzsfcceciimdoiibif`)
 
 ### PUMP-02 — Communications log home
 

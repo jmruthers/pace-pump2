@@ -24,13 +24,17 @@ const sampleRow: OrganisationTemplateRow = {
   updated_at: '2026-05-07T10:00:00Z',
 };
 
+let canRead = true;
 let canCreate = true;
 let canUpdate = true;
 let templates: OrganisationTemplateRow[] = [sampleRow];
 let isLoading = false;
 let isError = false;
 
-const mutateAsync = vi.fn(async () => undefined);
+const retry = vi.fn();
+const createMutateAsync = vi.fn(async () => undefined);
+const retireMutateAsync = vi.fn(async () => undefined);
+const activateMutateAsync = vi.fn(async () => undefined);
 
 vi.mock('@solvera/pace-core/hooks', () => ({
   useUnifiedAuth: () => ({
@@ -40,7 +44,18 @@ vi.mock('@solvera/pace-core/hooks', () => ({
 }));
 
 vi.mock('@solvera/pace-core/rbac', () => ({
-  PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PagePermissionGuard: ({
+    children,
+    operation,
+  }: {
+    children: ReactNode;
+    operation: string;
+  }) => {
+    if (operation === 'read' && !canRead) {
+      return <p role="alert">Access denied</p>;
+    }
+    return <>{children}</>;
+  },
   useCan: (permission: string) => {
     if (permission === 'create:page.CommsTemplates') {
       return { can: canCreate, isLoading: false };
@@ -57,16 +72,16 @@ vi.mock('@/hooks/templates/useOrganisationTemplates', () => ({
     data: templates,
     isLoading,
     isError,
-    refetch: vi.fn(),
+    retry,
   }),
 }));
 
 vi.mock('@/hooks/templates/useTemplateMutations', () => ({
   useTemplateMutations: () => ({
-    createMutation: { mutateAsync, isPending: false },
-    updateMutation: { mutateAsync, isPending: false },
-    retireMutation: { mutateAsync, isPending: false },
-    activateMutation: { mutateAsync, isPending: false },
+    createMutation: { mutateAsync: createMutateAsync, isPending: false },
+    updateMutation: { mutateAsync: vi.fn(), isPending: false },
+    retireMutation: { mutateAsync: retireMutateAsync, isPending: false },
+    activateMutation: { mutateAsync: activateMutateAsync, isPending: false },
     rowToFormValues: (row: OrganisationTemplateRow) => ({
       name: row.name,
       description: row.description ?? '',
@@ -99,12 +114,15 @@ vi.mock('@solvera/pace-core/components', () => ({
     value,
     onChange,
     placeholder,
+    'aria-label': ariaLabel,
   }: {
     value?: string;
     onChange?: (value: string) => void;
     placeholder?: string;
+    'aria-label'?: string;
   }) => (
     <input
+      aria-label={ariaLabel}
       placeholder={placeholder}
       value={value ?? ''}
       onChange={(event) => onChange?.(event.target.value)}
@@ -113,12 +131,15 @@ vi.mock('@solvera/pace-core/components', () => ({
   Switch: ({
     checked,
     onChange,
+    'aria-label': ariaLabel,
   }: {
     checked?: boolean;
     onChange?: (checked: boolean) => void;
+    'aria-label'?: string;
   }) => (
     <input
       type="checkbox"
+      aria-label={ariaLabel}
       checked={checked}
       onChange={(event) => onChange?.(event.target.checked)}
     />
@@ -127,10 +148,16 @@ vi.mock('@solvera/pace-core/components', () => ({
   Badge: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
   DataTable: ({
     data,
+    columns,
     isLoading: loading,
     onRowActivate,
   }: {
     data: OrganisationTemplateRow[];
+    columns: Array<{
+      id: string;
+      accessorKey?: keyof OrganisationTemplateRow;
+      cell?: (ctx: { row: OrganisationTemplateRow }) => ReactNode;
+    }>;
     isLoading?: boolean;
     onRowActivate?: (row: OrganisationTemplateRow) => void;
   }) =>
@@ -141,11 +168,17 @@ vi.mock('@solvera/pace-core/components', () => ({
         <tbody>
           {data.map((row) => (
             <tr key={row.id}>
-              <td>
-                <button type="button" onClick={() => onRowActivate?.(row)}>
-                  {row.name}
-                </button>
-              </td>
+              {columns.map((column) => (
+                <td key={column.id}>
+                  {column.cell != null ? (
+                    column.cell({ row })
+                  ) : (
+                    <button type="button" onClick={() => onRowActivate?.(row)}>
+                      {String(row[column.accessorKey ?? 'name'] ?? '')}
+                    </button>
+                  )}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -201,6 +234,7 @@ describe('TemplatesPage', () => {
   });
 
   beforeEach(() => {
+    canRead = true;
     canCreate = true;
     canUpdate = true;
     templates = [sampleRow];
@@ -227,12 +261,55 @@ describe('TemplatesPage', () => {
     expect(screen.queryByRole('button', { name: 'Create template' })).toBeNull();
   });
 
+  it('shows access denied without read permission (AC-4)', () => {
+    canRead = false;
+    render(<TemplatesPage />);
+    expect(screen.getByRole('alert', { name: '' }).textContent).toBe('Access denied');
+    expect(screen.queryByText('Templates')).toBeNull();
+  });
+
+  it('shows Create but hides Edit for read+create profile (AC-read-create)', () => {
+    canCreate = true;
+    canUpdate = false;
+    render(<TemplatesPage />);
+    expect(screen.getByRole('button', { name: 'Create template' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Edit Welcome/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Preview Welcome/ })).toBeTruthy();
+  });
+
+  it('shows Edit and Retire but hides Create for read+update profile (AC-read-update)', () => {
+    canCreate = false;
+    canUpdate = true;
+    render(<TemplatesPage />);
+    expect(screen.queryByRole('button', { name: 'Create template' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Edit Welcome/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Retire Welcome/ })).toBeTruthy();
+  });
+
   it('hides mutate row actions for read-only operators (AC-11)', () => {
     canCreate = false;
     canUpdate = false;
     render(<TemplatesPage />);
     expect(screen.queryByRole('button', { name: /Edit Welcome/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Retire Welcome/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Preview Welcome/ })).toBeTruthy();
+  });
+
+  it('opens retire confirmation when Retire is clicked (AC-9)', async () => {
+    const user = userEvent.setup();
+    render(<TemplatesPage />);
+    await user.click(screen.getByRole('button', { name: /Retire Welcome/ }));
+    expect(screen.getByText('Retire template?')).toBeTruthy();
+    expect(screen.getByText(/Retire 'Welcome'/)).toBeTruthy();
+  });
+
+  it('activates retired template without confirmation dialog (AC-10)', async () => {
+    const user = userEvent.setup();
+    templates = [{ ...sampleRow, is_active: false, name: 'Retired tpl' }];
+    render(<TemplatesPage />);
+    await user.click(screen.getByLabelText('Show retired templates'));
+    await user.click(screen.getByRole('button', { name: /Activate Retired tpl/ }));
+    expect(activateMutateAsync).toHaveBeenCalledWith('tpl-1');
   });
 
   it('shows error panel and retry when list fails (AC-13)', () => {
@@ -240,6 +317,16 @@ describe('TemplatesPage', () => {
     render(<TemplatesPage />);
     expect(screen.getByText("Couldn't load templates.")).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
+  });
+
+  it('shows retired rows and Inactive badge when toggle is on (AC-15)', async () => {
+    const user = userEvent.setup();
+    templates = [{ ...sampleRow, is_active: false, name: 'Retired tpl' }];
+    render(<TemplatesPage />);
+    expect(screen.queryByText('Retired tpl')).toBeNull();
+    await user.click(screen.getByLabelText('Show retired templates'));
+    expect(screen.getByText('Retired tpl')).toBeTruthy();
+    expect(screen.getByText('Inactive')).toBeTruthy();
   });
 
   it('filters rows by search query (AC-16)', async () => {
