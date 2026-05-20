@@ -4,7 +4,7 @@
 
 - Slice ID: PUMP-06
 - Name: Webhooks & delivery pipeline (Edge-only)
-- Status: Draft (build gated on CR23 PUMP Edge functions deployment to dev-db)
+- Status: Built (Edge v3 deployed `yihzsfcceciimdoiibif`; §12 signed fixtures blocked until gateway signing secrets + seeded `gateway_message_id`)
 - Depends on: PUMP-05
 - Backend impact: Schema in place; Edge runtime to be deployed (no schema work owned by this slice)
 - Frontend impact: Non-UI (Edge-only)
