@@ -4,6 +4,7 @@ import {
   coerceEffectivePumpSenderIdentityRow,
   deriveChannelReadiness,
   buildSenderIdentityRpcArgs,
+  expectSingleSenderIdentityRow,
   type EffectivePumpSenderIdentity,
 } from './senderIdentityContract';
 import {
@@ -52,6 +53,13 @@ describe('senderIdentityContract', () => {
     expect(coerceEffectivePumpSenderIdentityRow(null)).toBeNull();
     expect(coerceEffectivePumpSenderIdentityRow([])).toBeNull();
     expect(coerceEffectivePumpSenderIdentityRow('bad')).toBeNull();
+  });
+
+  it('expectSingleSenderIdentityRow requires exactly one row', () => {
+    const row = sampleRow();
+    expect(expectSingleSenderIdentityRow([row])).toEqual(row);
+    expect(() => expectSingleSenderIdentityRow([])).toThrow(/exactly one/);
+    expect(() => expectSingleSenderIdentityRow([row, row])).toThrow(/exactly one/);
   });
 
   it('assertEffectivePumpSenderIdentityShape accepts a valid row', () => {

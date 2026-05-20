@@ -22,7 +22,7 @@
 | PUMP-01 — App shell & information architecture | - | done | CommRbac: inline `src/components/comms/CommRbacContextProvider.tsx` (2026-05-20) |
 | PUMP-04 — Template library | PUMP-01 |  |  |
 | PUMP-02 — Communications log home | PUMP-01 |  |  |
-| PUMP-03 — Platform-managed sender identity contract | PUMP-01 | done | Contract hook + RPC integration tests (2026-05-20) |
+| PUMP-03 — Platform-managed sender identity contract | PUMP-01 | done | SPA contract + AC trace 2026-05-20; AC-7 env-gated; AC-10/11 → PUMP-07 |
 | PUMP-05 — Compose & send | PUMP-01, PUMP-04 |  |  |
 | PUMP-06 — Webhooks & delivery pipeline (Edge-only) | PUMP-05 |  |  |
 | PUMP-07 — Send Pipeline Edge Implementation | PUMP-05, PUMP-06 |  |  |
@@ -52,8 +52,10 @@
 
 - authority: [`docs/requirements/PU03-sender-identity-contract-requirements.md`](../requirements/PU03-sender-identity-contract-requirements.md)
 - backend freeze: PU03 PASS per [`pump-backend-ready-report.md`](pump-backend-ready-report.md) — `pump_get_effective_sender_identity` RPC; **`pump_org_settings` FORCE RLS** (**DB-PUMP-001**)
-- SPA contract: `useEffectivePumpSenderIdentity` + `src/lib/comms/senderIdentityContract*` (unit + live RPC integration tests; 7 integration cases skip without dev-db env)
-- contract-only UI: no compose banner yet — PUMP-05 consumes the hook; Edge send-time validation unchanged in pace-core2
+- acceptance trace: [`PUMP-03-acceptance-trace.md`](PUMP-03-acceptance-trace.md) — AC-1..9 SPA-complete (conditional on live env); AC-10/11 deferred to PUMP-07
+- remediation: [`PUMP-03-remediation-plan.md`](PUMP-03-remediation-plan.md) — closed for SPA; AC-7 optional credentials per [`PUMP-03-contract-test-user.md`](PUMP-03-contract-test-user.md)
+- SPA contract: `useEffectivePumpSenderIdentity` + `src/lib/comms/senderIdentityContract*` (24 unit + 9 integration tests; integration skipped in CI without live env)
+- contract-only UI: no compose banner — PUMP-05 consumes the hook; Edge send-time validation in pace-core2 (PUMP-07)
 
 ### PUMP-05 — Compose & send
 

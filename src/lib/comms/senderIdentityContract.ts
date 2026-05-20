@@ -45,6 +45,21 @@ export function coerceEffectivePumpSenderIdentityRow(
   return null;
 }
 
+/** §4 item 2 — RPC returns exactly one row on success. */
+export function expectSingleSenderIdentityRow(data: unknown): EffectivePumpSenderIdentity {
+  if (!Array.isArray(data)) {
+    throw new Error('Expected RPC to return an array with one row');
+  }
+  if (data.length !== 1) {
+    throw new Error(`Expected exactly one sender identity row, got ${data.length}`);
+  }
+  const row = coerceEffectivePumpSenderIdentityRow(data);
+  if (row == null) {
+    throw new Error('Expected a valid sender identity row');
+  }
+  return row;
+}
+
 export function assertEffectivePumpSenderIdentityShape(
   row: EffectivePumpSenderIdentity
 ): void {
