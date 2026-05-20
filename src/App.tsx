@@ -20,9 +20,9 @@ function SessionRestorationLayout() {
   );
 }
 
-const CommsLogPlaceholder = lazy(() =>
-  import('@/components/shell/CommsLogPlaceholder').then((module) => ({
-    default: module.CommsLogPlaceholder,
+const CommsLogPage = lazy(() =>
+  import('@/components/comms/CommsLogPage').then((module) => ({
+    default: module.CommsLogPage,
   }))
 );
 
@@ -59,7 +59,7 @@ function App() {
             element={
               <PagePermissionGuard pageName="CommsLog" operation="read">
                 <Suspense fallback={<LazyRouteFallback />}>
-                  <CommsLogPlaceholder />
+                  <CommsLogPage />
                 </Suspense>
               </PagePermissionGuard>
             }
