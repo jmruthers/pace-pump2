@@ -20,7 +20,7 @@ Tracking: [PUMP-06-acceptance-status.md](PUMP-06-acceptance-status.md)
 
 **Requirement:** §15, §12, §11 live evidence on `pump-webhook/{gateway}`.
 
-**Current state:** Backend-ready report confirms slug ACTIVE (`verify_jwt: false`) on `yihzsfcceciimdoiibif`, but runtime may predate commit `511a33a`.
+**Current state:** Deployed with `0f1d851` (2026-05-20 redeploy after verify-export commit).
 
 **Remediation:**
 
