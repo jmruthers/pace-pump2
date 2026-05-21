@@ -48,12 +48,4 @@ config.push({
   ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'audit/**', '**/*.cjs'],
 });
 
-config.push({
-  files: ['**/*.integration.test.ts'],
-  rules: {
-    'pace-core-compliance/no-direct-supabase-client': 'off',
-    'pace-core-compliance/prefer-import-meta-env': 'off',
-  },
-});
-
 module.exports = config;
