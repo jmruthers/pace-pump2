@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState, type ReactNode } from 'react';
+import type { ButtonVariant } from '@solvera/pace-core/components';
 import { MERGE_TOKEN_SHAPE_MESSAGE } from '@/lib/templates/tokenValidation';
 import { TemplateEditorDialog } from './TemplateEditorDialog';
 
@@ -56,7 +57,7 @@ vi.mock('@solvera/pace-core/components', async () => {
       onClick?: () => void;
       children?: ReactNode;
       disabled?: boolean;
-      variant?: string;
+      variant?: ButtonVariant;
     }) =>
       type === 'submit' ? (
         <PaceButton type="button" onClick={() => triggerFormSubmit?.()} {...rest}>
@@ -115,7 +116,7 @@ vi.mock('@solvera/pace-core/components', async () => {
           const nameInput = document.querySelector<HTMLInputElement>('[name="name"]');
           const subjectInput =
             document.querySelector<HTMLInputElement>('[name="subject"]') ??
-            document.getElementById('form-field-subject');
+            document.getElementById('form-field-subject') as HTMLInputElement | null;
           void onSubmit({
             name: nameInput?.value ?? fieldValues['form-field-name'] ?? '',
             description: '',

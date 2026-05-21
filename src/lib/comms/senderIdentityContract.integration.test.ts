@@ -1,4 +1,8 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  createContractPublishableClient,
+  createContractServiceRoleClient,
+} from './supabase/contractTestClient.js';
 import { describe, expect, it, beforeAll } from 'vitest';
 import {
   assertEffectivePumpSenderIdentityShape,
@@ -221,9 +225,9 @@ async function discoverFixtures(admin: SupabaseClient): Promise<ContractFixtures
 describe.skipIf(!liveEnv)('pump_get_effective_sender_identity contract (live dev-db)', () => {
   beforeAll(async () => {
     const env = readContractTestEnv();
-    publishableClient = createClient(env.supabaseUrl, env.publishableKey);
+    publishableClient = createContractPublishableClient(env.supabaseUrl, env.publishableKey);
     if (env.serviceRoleKey) {
-      serviceClient = createClient(env.supabaseUrl, env.serviceRoleKey);
+      serviceClient = createContractServiceRoleClient(env.supabaseUrl, env.serviceRoleKey);
       fixtures = await discoverFixtures(serviceClient);
     }
   });
@@ -397,7 +401,7 @@ describe.skipIf(!liveEnv)('pump_get_effective_sender_identity contract (live dev
       return;
     }
 
-    const sessionClient = createClient(env.supabaseUrl, env.publishableKey);
+    const sessionClient = createContractPublishableClient(env.supabaseUrl, env.publishableKey);
     const { error: signInError } = await sessionClient.auth.signInWithPassword({
       email: env.noGrantEmail!,
       password: env.noGrantPassword!,
