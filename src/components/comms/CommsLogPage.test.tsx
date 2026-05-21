@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components -- test doubles */
 // @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -50,49 +49,54 @@ vi.mock('@/components/comms/CommRbacContextProvider', () => ({
   }),
 }));
 
-vi.mock('./CommsLogTable.js', () => ({
-  CommsLogTable: ({
-    listRefreshKey,
-    onRowActivate,
-    onFetchSuccess,
-    onFetchError,
-  }: {
-    listRefreshKey: number;
-    onRowActivate: (row: PumpMessageRow) => void;
-    onFetchSuccess: (rows: unknown[], total: number) => void;
-    onFetchError: (error: Error) => void;
-  }) => (
-    <div data-refresh-key={listRefreshKey}>
-      <button
-        type="button"
-        onClick={() =>
-          onRowActivate({
-            id: '550e8400-e29b-41d4-a716-446655440000',
-            organisation_id: 'org-42',
-            channel: 'email',
-            subject: 'Hello',
-            body_text: 'Body',
-            status: 'sent',
-            scheduled_at: null,
-            sent_at: '2026-05-01T10:00:00.000Z',
-            source_app: 'PUMP',
-            total_recipients: 1,
-            created_by: 'user-1',
-            created_at: '2026-05-01T09:00:00.000Z',
-          } as PumpMessageRow)
-        }
-      >
-        Open row
-      </button>
-      <button type="button" onClick={() => onFetchSuccess([], 0)}>
-        Empty list
-      </button>
-      <button type="button" onClick={() => onFetchError(new Error('boom'))}>
-        Fail list
-      </button>
-    </div>
-  ),
-}));
+vi.mock('./CommsLogTable.js', async () => {
+  const { Button } = await vi.importActual<typeof import('@solvera/pace-core/components')>(
+    '@solvera/pace-core/components'
+  );
+  return {
+    CommsLogTable: ({
+      listRefreshKey,
+      onRowActivate,
+      onFetchSuccess,
+      onFetchError,
+    }: {
+      listRefreshKey: number;
+      onRowActivate: (row: PumpMessageRow) => void;
+      onFetchSuccess: (rows: unknown[], total: number) => void;
+      onFetchError: (error: Error) => void;
+    }) => (
+      <div data-refresh-key={listRefreshKey}>
+        <Button
+          type="button"
+          onClick={() =>
+            onRowActivate({
+              id: '550e8400-e29b-41d4-a716-446655440000',
+              organisation_id: 'org-42',
+              channel: 'email',
+              subject: 'Hello',
+              body_text: 'Body',
+              status: 'sent',
+              scheduled_at: null,
+              sent_at: '2026-05-01T10:00:00.000Z',
+              source_app: 'PUMP',
+              total_recipients: 1,
+              created_by: 'user-1',
+              created_at: '2026-05-01T09:00:00.000Z',
+            } as PumpMessageRow)
+          }
+        >
+          Open row
+        </Button>
+        <Button type="button" onClick={() => onFetchSuccess([], 0)}>
+          Empty list
+        </Button>
+        <Button type="button" onClick={() => onFetchError(new Error('boom'))}>
+          Fail list
+        </Button>
+      </div>
+    ),
+  };
+});
 
 vi.mock('./CommsLogDrillDownDialog.js', () => ({
   CommsLogDrillDownDialog: ({

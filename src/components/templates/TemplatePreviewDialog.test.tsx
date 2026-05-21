@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components */
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -12,19 +11,18 @@ vi.mock('@solvera/pace-core/comms', () => ({
   MessagePreview: vi.fn(() => <article>Message preview</article>),
 }));
 
-vi.mock('@solvera/pace-core/components', () => ({
-  Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
-    <button type="button" onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
-    open ? <aside>{children}</aside> : null,
-  DialogContent: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DialogHeader: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
-  DialogFooter: ({ children }: { children: ReactNode }) => <footer>{children}</footer>,
-}));
+vi.mock('@solvera/pace-core/components', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@solvera/pace-core/components')>();
+  return {
+    ...actual,
+    Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
+      open ? <aside>{children}</aside> : null,
+    DialogContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+    DialogHeader: ({ children }: { children: ReactNode }) => <>{children}</>,
+    DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+    DialogFooter: ({ children }: { children: ReactNode }) => <footer>{children}</footer>,
+  };
+});
 
 const template: OrganisationTemplateRow = {
   id: 'tpl-1',

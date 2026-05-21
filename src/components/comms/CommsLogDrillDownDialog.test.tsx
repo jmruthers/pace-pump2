@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components -- test doubles */
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -29,28 +28,21 @@ vi.mock('@/hooks/comms/useCommsLogDrillDown.js', () => ({
   useCommsLogDrillDown: () => drillDownState,
 }));
 
-vi.mock('@solvera/pace-core/components', () => ({
-  Button: ({
-    children,
-    onClick,
-  }: {
-    children?: ReactNode;
-    onClick?: () => void;
-  }) => (
-    <button type="button" onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Card: ({ children }: { children: ReactNode }) => <article>{children}</article>,
-  Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
-    open ? <aside>{children}</aside> : null,
-  DialogBody: ({ children }: { children: ReactNode }) => <section>{children}</section>,
-  DialogContent: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DialogDescription: () => null,
-  DialogHeader: ({ children }: { children: ReactNode }) => <header>{children}</header>,
-  DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
-  LoadingSpinner: () => <output aria-busy="true">Loading</output>,
-}));
+vi.mock('@solvera/pace-core/components', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@solvera/pace-core/components')>();
+  return {
+    ...actual,
+    Card: ({ children }: { children: ReactNode }) => <article>{children}</article>,
+    Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
+      open ? <aside>{children}</aside> : null,
+    DialogBody: ({ children }: { children: ReactNode }) => <section>{children}</section>,
+    DialogContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+    DialogDescription: () => null,
+    DialogHeader: ({ children }: { children: ReactNode }) => <header>{children}</header>,
+    DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+    LoadingSpinner: () => <output aria-busy="true">Loading</output>,
+  };
+});
 
 describe('CommsLogDrillDownDialog', () => {
   afterEach(() => {

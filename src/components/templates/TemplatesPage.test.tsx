@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components, pace-core-compliance/prefer-pace-core-form */
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -93,135 +92,57 @@ vi.mock('@/hooks/templates/useTemplateMutations', () => ({
   }),
 }));
 
-vi.mock('@solvera/pace-core/components', () => ({
-  toast: vi.fn(),
-  Button: ({
-    children,
-    onClick,
-    type = 'button',
-    'aria-label': ariaLabel,
-  }: {
-    children?: ReactNode;
-    onClick?: () => void;
-    type?: 'button' | 'submit';
-    'aria-label'?: string;
-  }) => (
-    <button type={type} onClick={onClick} aria-label={ariaLabel}>
-      {children}
-    </button>
-  ),
-  Input: ({
-    value,
-    onChange,
-    placeholder,
-    'aria-label': ariaLabel,
-  }: {
-    value?: string;
-    onChange?: (value: string) => void;
-    placeholder?: string;
-    'aria-label'?: string;
-  }) => (
-    <input
-      aria-label={ariaLabel}
-      placeholder={placeholder}
-      value={value ?? ''}
-      onChange={(event) => onChange?.(event.target.value)}
-    />
-  ),
-  Switch: ({
-    checked,
-    onChange,
-    'aria-label': ariaLabel,
-  }: {
-    checked?: boolean;
-    onChange?: (checked: boolean) => void;
-    'aria-label'?: string;
-  }) => (
-    <input
-      type="checkbox"
-      aria-label={ariaLabel}
-      checked={checked}
-      onChange={(event) => onChange?.(event.target.checked)}
-    />
-  ),
-  Label: ({ children }: { children?: ReactNode }) => <label>{children}</label>,
-  Badge: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  DataTable: ({
-    data,
-    columns,
-    isLoading: loading,
-    onRowActivate,
-  }: {
-    data: OrganisationTemplateRow[];
-    columns: Array<{
-      id: string;
-      accessorKey?: keyof OrganisationTemplateRow;
-      cell?: (ctx: { row: OrganisationTemplateRow }) => ReactNode;
-    }>;
-    isLoading?: boolean;
-    onRowActivate?: (row: OrganisationTemplateRow) => void;
-  }) =>
-    loading ? (
-      <p>Loading table</p>
-    ) : (
-      <table>
-        <tbody>
-          {data.map((row) => (
-            <tr key={row.id}>
-              {columns.map((column) => (
-                <td key={column.id}>
-                  {column.cell != null ? (
-                    column.cell({ row })
-                  ) : (
-                    <button type="button" onClick={() => onRowActivate?.(row)}>
-                      {String(row[column.accessorKey ?? 'name'] ?? '')}
-                    </button>
-                  )}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    ),
-  Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
-    open ? <aside>{children}</aside> : null,
-  DialogContent: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DialogHeader: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
-  DialogFooter: ({ children }: { children: ReactNode }) => <footer>{children}</footer>,
-  Form: ({
-    children,
-    onSubmit,
-  }: {
-    children: (methods: { watch: () => string }) => ReactNode;
-    onSubmit: (values: unknown) => void;
-  }) => (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit({
-          name: 'New',
-          description: '',
-          channel: 'email',
-          subject: 'Subj',
-          body: 'Body',
-          require_merge_field_validation: false,
-        });
-      }}
-    >
-      {typeof children === 'function' ? children({ watch: () => 'email' }) : children}
-    </form>
-  ),
-  FormField: ({ label }: { label?: string }) => <label>{label}</label>,
-  LoadingSpinner: () => <span>spinner</span>,
-  Select: ({ children }: { children: ReactNode }) => <>{children}</>,
-  SelectTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
-  SelectValue: () => null,
-  SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
-  SelectItem: ({ children }: { children: ReactNode }) => <>{children}</>,
-  Textarea: () => <textarea />,
-}));
+vi.mock('@solvera/pace-core/components', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@solvera/pace-core/components')>();
+  return {
+    ...actual,
+    toast: vi.fn(),
+    DataTable: ({
+      data,
+      columns,
+      isLoading: loading,
+      onRowActivate,
+    }: {
+      data: OrganisationTemplateRow[];
+      columns: Array<{
+        id: string;
+        accessorKey?: keyof OrganisationTemplateRow;
+        cell?: (ctx: { row: OrganisationTemplateRow }) => ReactNode;
+      }>;
+      isLoading?: boolean;
+      onRowActivate?: (row: OrganisationTemplateRow) => void;
+    }) =>
+      loading ? (
+        <p>Loading table</p>
+      ) : (
+        <table>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.id}>
+                {columns.map((column) => (
+                  <td key={column.id}>
+                    {column.cell != null ? (
+                      column.cell({ row })
+                    ) : (
+                      <actual.Button type="button" onClick={() => onRowActivate?.(row)}>
+                        {String(row[column.accessorKey ?? 'name'] ?? '')}
+                      </actual.Button>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ),
+    Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
+      open ? <aside>{children}</aside> : null,
+    DialogContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+    DialogHeader: ({ children }: { children: ReactNode }) => <>{children}</>,
+    DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+    DialogFooter: ({ children }: { children: ReactNode }) => <footer>{children}</footer>,
+  };
+});
 
 vi.mock('@solvera/pace-core/comms', () => ({
   MessagePreview: () => <article>Message preview</article>,

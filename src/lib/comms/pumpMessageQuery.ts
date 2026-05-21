@@ -5,9 +5,10 @@ import { createErrorResult, createSuccessResult } from '@solvera/pace-core/types
 import { localDayBoundsIso } from './commsLogFormat.js';
 import type { CommsLogSearchState, PumpMessageRow } from './commsLogTypes.js';
 import { PUMP_MESSAGE_LIST_COLUMNS } from './commsLogTypes.js';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type MessageQuery = any;
+import {
+  pumpFrom,
+  type PumpPostgrestQueryBuilder,
+} from './pumpSupabaseQueryBuilder.js';
 
 export function buildDateRangeOrFilter(fromYmd: string, toYmd: string): string {
   const from = localDayBoundsIso(fromYmd).start;
@@ -20,9 +21,9 @@ export function buildDateRangeOrFilter(fromYmd: string, toYmd: string): string {
 }
 
 export function applyListFilters(
-  query: MessageQuery,
+  query: PumpPostgrestQueryBuilder,
   filters: Pick<CommsLogSearchState, 'channel' | 'statuses' | 'from' | 'to'>
-): MessageQuery {
+): PumpPostgrestQueryBuilder {
   let next = query;
   if (filters.channel != null) {
     next = next.eq('channel', filters.channel);
@@ -55,9 +56,9 @@ export function applyListFilters(
 }
 
 export function applyListSort(
-  query: MessageQuery,
+  query: PumpPostgrestQueryBuilder,
   sortDir: 'asc' | 'desc'
-): MessageQuery {
+): PumpPostgrestQueryBuilder {
   const ascending = sortDir === 'asc';
   return query
     .order('sent_at', { ascending, nullsFirst: false })
@@ -89,14 +90,14 @@ export async function fetchPumpMessageList(
   const from = pageIndex * pageSize;
   const to = from + pageSize - 1;
 
-  let listQuery = (supabase.from('pump_message') as MessageQuery)
+  let listQuery = pumpFrom(supabase, 'pump_message')
     .select(PUMP_MESSAGE_LIST_COLUMNS)
     .eq('organisation_id', organisationId);
 
   listQuery = applyListFilters(listQuery, search);
   listQuery = applyListSort(listQuery, sortDir);
 
-  let countQuery = (supabase.from('pump_message') as MessageQuery)
+  let countQuery = pumpFrom(supabase, 'pump_message')
     .select('id', { count: 'exact', head: true })
     .eq('organisation_id', organisationId);
 

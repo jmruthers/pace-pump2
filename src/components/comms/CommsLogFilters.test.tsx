@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components -- test doubles */
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,46 +8,34 @@ import { CommsLogFilters } from './CommsLogFilters.js';
 
 let fromOnChange: ((date: Date | null) => void) | undefined;
 
-vi.mock('@solvera/pace-core/components', () => ({
-  Button: ({
-    children,
-    onClick,
-    'aria-label': ariaLabel,
-  }: {
-    children?: ReactNode;
-    onClick?: () => void;
-    'aria-label'?: string;
-  }) => (
-    <button type="button" aria-label={ariaLabel} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  DatePickerWithTimezone: ({
-    placeholder,
-    onChange,
-  }: {
-    placeholder?: string;
-    onChange?: (date: Date | null) => void;
-  }) => {
-    if (placeholder === 'From') {
-      fromOnChange = onChange;
-    }
-    return (
-      <button
-        type="button"
-        onClick={() => onChange?.(null)}
-      >
-        {placeholder}
-      </button>
-    );
-  },
-  MultiSelect: () => <div>statuses</div>,
-  Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SelectContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SelectItem: () => null,
-  SelectTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SelectValue: () => null,
-}));
+vi.mock('@solvera/pace-core/components', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@solvera/pace-core/components')>();
+  return {
+    ...actual,
+    DatePickerWithTimezone: ({
+      placeholder,
+      onChange,
+    }: {
+      placeholder?: string;
+      onChange?: (date: Date | null) => void;
+    }) => {
+      if (placeholder === 'From') {
+        fromOnChange = onChange;
+      }
+      return (
+        <actual.Button type="button" onClick={() => onChange?.(null)}>
+          {placeholder}
+        </actual.Button>
+      );
+    },
+    MultiSelect: () => <div>statuses</div>,
+    Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    SelectContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    SelectItem: () => null,
+    SelectTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    SelectValue: () => null,
+  };
+});
 
 vi.mock('@solvera/pace-core/icons', () => ({
   RefreshCcw: () => <span aria-hidden>refresh</span>,
