@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components, pace-core-compliance/prefer-pace-core-form */
 // @vitest-environment happy-dom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -11,133 +10,175 @@ const toast = vi.fn();
 const onSave = vi.fn(async () => undefined);
 const onOpenChange = vi.fn();
 
-vi.mock('@solvera/pace-core/components', () => ({
-  toast: (...args: unknown[]) => toast(...args),
-  Button: ({
-    children,
-    type = 'button',
-    onClick,
+let triggerFormSubmit: (() => void) | null = null;
+const fieldValues: Record<string, string> = {};
+
+vi.mock('@solvera/pace-core/components', async () => {
+  const actual = await vi.importActual<typeof import('@solvera/pace-core/components')>(
+    '@solvera/pace-core/components'
+  );
+  const { Button: PaceButton, Input, Textarea: PaceTextarea, Label } = actual;
+
+  const Textarea = ({
+    id,
+    value,
+    onChange,
+    ...rest
   }: {
-    children?: ReactNode;
-    type?: 'button' | 'submit';
-    onClick?: () => void;
+    id?: string;
+    value?: string;
+    onChange?: (value: string) => void;
+    placeholder?: string;
+    rows?: number;
   }) => (
-    <button type={type} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
-    open ? <aside data-testid="editor-dialog">{children}</aside> : null,
-  DialogContent: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DialogHeader: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
-  DialogFooter: ({ children }: { children: ReactNode }) => <footer>{children}</footer>,
-  Form: ({
-    children,
-    onSubmit,
-  }: {
-    children: (methods: {
-      watch: (field: string) => string | boolean;
-      setValue: (field: string, value: string | boolean) => void;
-      setError: (name: string, error: { message: string }) => void;
-      clearErrors: () => void;
-    }) => ReactNode;
-    onSubmit: (values: {
+    <PaceTextarea
+      id={id}
+      value={id != null ? (fieldValues[id] ?? value ?? '') : (value ?? '')}
+      onChange={(next) => {
+        if (id != null) {
+          fieldValues[id] = next;
+        }
+        onChange?.(next);
+      }}
+      {...rest}
+    />
+  );
+
+  return {
+    toast: (...args: unknown[]) => toast(...args),
+    Button: ({
+      type = 'button',
+      onClick,
+      children,
+      ...rest
+    }: {
+      type?: 'button' | 'submit';
+      onClick?: () => void;
+      children?: ReactNode;
+      disabled?: boolean;
+      variant?: string;
+    }) =>
+      type === 'submit' ? (
+        <PaceButton type="button" onClick={() => triggerFormSubmit?.()} {...rest}>
+          {children}
+        </PaceButton>
+      ) : (
+        <PaceButton type={type} onClick={onClick} {...rest}>
+          {children}
+        </PaceButton>
+      ),
+    Input,
+    Textarea,
+    Label,
+    Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
+      open ? <aside data-testid="editor-dialog">{children}</aside> : null,
+    DialogContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+    DialogHeader: ({ children }: { children: ReactNode }) => <>{children}</>,
+    DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+    DialogFooter: ({ children }: { children: ReactNode }) => <footer>{children}</footer>,
+    Form: ({
+      children,
+      onSubmit,
+    }: {
+      children: (methods: {
+        watch: (field: string) => string | boolean;
+        setValue: (field: string, value: string | boolean) => void;
+        setError: (name: string, error: { message: string }) => void;
+        clearErrors: () => void;
+      }) => ReactNode;
+      onSubmit: (values: {
+        name: string;
+        description: string;
+        channel: 'email' | 'sms';
+        subject: string;
+        body: string;
+        require_merge_field_validation: boolean;
+      }) => void | Promise<void>;
+    }) => {
+      function MockForm() {
+        const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+        const methods = {
+          watch: (field: string) => {
+            if (field === 'channel') return 'email';
+            if (field === 'require_merge_field_validation') return false;
+            return '';
+          },
+          setValue: vi.fn(),
+          setError: (name: string, error: { message: string }) => {
+            setFieldErrors((prev) => ({ ...prev, [name]: error.message }));
+          },
+          clearErrors: () => {
+            setFieldErrors({});
+          },
+        };
+        triggerFormSubmit = () => {
+          const nameInput = document.querySelector<HTMLInputElement>('[name="name"]');
+          const subjectInput =
+            document.querySelector<HTMLInputElement>('[name="subject"]') ??
+            document.getElementById('form-field-subject');
+          void onSubmit({
+            name: nameInput?.value ?? fieldValues['form-field-name'] ?? '',
+            description: '',
+            channel: 'email',
+            subject: subjectInput?.value ?? fieldValues['form-field-subject'] ?? 'Subject',
+            body: fieldValues['form-field-body'] ?? '',
+            require_merge_field_validation: false,
+          });
+        };
+        return (
+          <div>
+            {children(methods)}
+            {Object.entries(fieldErrors).map(([name, message]) => (
+              <p key={name} role="alert" data-field={name}>
+                {message}
+              </p>
+            ))}
+          </div>
+        );
+      }
+      return <MockForm />;
+    },
+    FormField: ({
+      name,
+      label,
+      render,
+    }: {
       name: string;
-      description: string;
-      channel: 'email' | 'sms';
-      subject: string;
-      body: string;
-      require_merge_field_validation: boolean;
-    }) => void | Promise<void>;
-  }) => {
-    function MockForm() {
-      const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-      const methods = {
-        watch: (field: string) => {
-          if (field === 'channel') return 'email';
-          if (field === 'require_merge_field_validation') return false;
-          return '';
-        },
-        setValue: vi.fn(),
-        setError: (name: string, error: { message: string }) => {
-          setFieldErrors((prev) => ({ ...prev, [name]: error.message }));
-        },
-        clearErrors: () => {
-          setFieldErrors({});
-        },
-      };
+      label?: string;
+      render?: (props: {
+        field: { value: string; onChange: (v: string) => void; onBlur: () => void };
+      }) => ReactNode;
+    }) => {
+      if (render != null) {
+        return (
+          <Label>
+            {label}
+            {render({
+              field: {
+                value: '',
+                onChange: () => undefined,
+                onBlur: () => undefined,
+              },
+            })}
+          </Label>
+        );
+      }
       return (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            const nameInput = document.querySelector<HTMLInputElement>('[name="name"]');
-            const bodyInput = document.querySelector<HTMLTextAreaElement>('[name="body"]');
-            const subjectInput = document.querySelector<HTMLInputElement>('[name="subject"]');
-            void onSubmit({
-              name: nameInput?.value ?? '',
-              description: '',
-              channel: 'email',
-              subject: subjectInput?.value ?? 'Subject',
-              body: bodyInput?.value ?? '',
-              require_merge_field_validation: false,
-            });
-          }}
-        >
-          {children(methods)}
-          {Object.entries(fieldErrors).map(([name, message]) => (
-            <p key={name} role="alert" data-field={name}>
-              {message}
-            </p>
-          ))}
-        </form>
-      );
-    }
-    return <MockForm />;
-  },
-  FormField: ({
-    name,
-    label,
-    render,
-  }: {
-    name: string;
-    label?: string;
-    render?: (props: {
-      field: { value: string; onChange: (v: string) => void; onBlur: () => void };
-    }) => ReactNode;
-  }) => {
-    if (render != null) {
-      return (
-        <label>
+        <Label>
           {label}
-          {render({
-            field: {
-              value: '',
-              onChange: () => undefined,
-              onBlur: () => undefined,
-            },
-          })}
-        </label>
+          <Input id={`form-field-${name}`} name={name} defaultValue="" />
+        </Label>
       );
-    }
-    return (
-      <label>
-        {label}
-        <input id={`form-field-${name}`} name={name} defaultValue="" />
-      </label>
-    );
-  },
-  Label: ({ children }: { children?: ReactNode }) => <label>{children}</label>,
-  LoadingSpinner: () => <span>spinner</span>,
-  Select: ({ children }: { children: ReactNode }) => <>{children}</>,
-  SelectTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
-  SelectValue: () => null,
-  SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
-  SelectItem: ({ children }: { children: ReactNode }) => <>{children}</>,
-  Textarea: () => <textarea name="body" />,
-  Switch: () => <input type="checkbox" />,
-  Input: () => null,
-}));
+    },
+    LoadingSpinner: () => <span>spinner</span>,
+    Select: ({ children }: { children: ReactNode }) => <>{children}</>,
+    SelectTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
+    SelectValue: () => null,
+    SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+    SelectItem: ({ children }: { children: ReactNode }) => <>{children}</>,
+    Switch: () => <Input type="checkbox" aria-label="strict" />,
+  };
+});
 
 const defaultValues = {
   name: '',
@@ -167,6 +208,10 @@ describe('TemplateEditorDialog', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    triggerFormSubmit = null;
+    for (const key of Object.keys(fieldValues)) {
+      delete fieldValues[key];
+    }
   });
 
   it('renders create dialog title (AC-5 UI)', () => {
@@ -199,20 +244,15 @@ describe('TemplateEditorDialog', () => {
         template={null}
         open
         onOpenChange={onOpenChange}
-        defaultValues={{
-          ...defaultValues,
-          name: 'Test',
-          body: 'Hello {{first_name',
-        }}
+        defaultValues={defaultValues}
         canUpdateStrictMode
         onSave={onSave}
         isSaving={false}
       />
     );
-    const body = document.querySelector<HTMLTextAreaElement>('[name="body"]');
-    if (body != null) {
-      body.value = 'Hello {{first_name';
-    }
+    fieldValues['form-field-name'] = 'Test';
+    fieldValues['form-field-subject'] = 'Subject';
+    fieldValues['form-field-body'] = 'Hello {{first_name';
     await user.click(screen.getByRole('button', { name: 'Save template' }));
     await waitFor(() => {
       expect(screen.getByText(MERGE_TOKEN_SHAPE_MESSAGE)).toBeTruthy();
@@ -240,9 +280,9 @@ describe('TemplateEditorDialog', () => {
         isSaving={false}
       />
     );
-    await user.type(document.querySelector<HTMLInputElement>('[name="name"]')!, 'Valid name');
-    await user.type(document.querySelector<HTMLInputElement>('[name="subject"]')!, 'Subject line');
-    await user.type(document.querySelector<HTMLTextAreaElement>('[name="body"]')!, 'Body text');
+    await user.type(document.getElementById('form-field-name')!, 'Valid name');
+    await user.type(document.getElementById('form-field-subject')!, 'Subject line');
+    await user.type(document.getElementById('form-field-body')!, 'Body text');
     await user.click(screen.getByRole('button', { name: 'Save template' }));
     expect(onSave).toHaveBeenCalled();
     expect(screen.getByTestId('editor-dialog')).toBeTruthy();

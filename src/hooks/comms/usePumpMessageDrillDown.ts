@@ -5,10 +5,8 @@ import type {
   PumpMessageRecipientRow,
   PumpMessageRow,
 } from '@/lib/comms/commsLogTypes.js';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type MessageQuery = any;
 import { isValidUuid } from '@/lib/comms/commsLogFormat.js';
+import { pumpFrom } from '@/lib/comms/pumpSupabaseQueryBuilder.js';
 
 export const pumpRecipientsQueryKey = (messageId: string) =>
   ['pumpMessageRecipients', messageId] as const;
@@ -23,7 +21,7 @@ export function usePumpMessageById(messageId: string | null, enabled: boolean) {
     queryKey: ['pumpMessage', messageId],
     enabled: enabled && messageId != null && isValidUuid(messageId),
     queryFn: async (): Promise<PumpMessageRow | null> => {
-      const { data, error } = await (supabase.from('pump_message') as MessageQuery)
+      const { data, error } = await pumpFrom(supabase, 'pump_message')
         .select('*')
         .eq('id', messageId!)
         .maybeSingle();
@@ -42,7 +40,7 @@ export function usePumpMessageRecipients(messageId: string | null, enabled: bool
     queryKey: pumpRecipientsQueryKey(messageId ?? ''),
     enabled: enabled && messageId != null && isValidUuid(messageId),
     queryFn: async (): Promise<PumpMessageRecipientRow[]> => {
-      const { data, error } = await (supabase.from('pump_message_recipient') as MessageQuery)
+      const { data, error } = await pumpFrom(supabase, 'pump_message_recipient')
         .select(
           'id, message_id, member_id, address, status, delivered_at, opened_at, clicked_at, failed_at, failure_reason, core_member(full_name)'
         )
@@ -63,20 +61,21 @@ export function usePumpDeliveryEvents(messageId: string | null, enabled: boolean
     queryKey: pumpDeliveryEventsQueryKey(messageId ?? ''),
     enabled: enabled && messageId != null && isValidUuid(messageId),
     queryFn: async (): Promise<PumpDeliveryEventRow[]> => {
-      const { data: recipients, error: recipientError } = await (
-        supabase.from('pump_message_recipient') as MessageQuery
+      const { data: recipients, error: recipientError } = await pumpFrom(
+        supabase,
+        'pump_message_recipient'
       )
         .select('id')
         .eq('message_id', messageId!);
       if (recipientError) {
         throw recipientError;
       }
-      const recipientIds = (recipients ?? []).map((row: { id: string }) => row.id);
+      const recipientIds = ((recipients ?? []) as Array<{ id: string }>).map((row) => row.id);
       if (recipientIds.length === 0) {
         return [];
       }
 
-      const { data, error } = await (supabase.from('pump_delivery_event') as MessageQuery)
+      const { data, error } = await pumpFrom(supabase, 'pump_delivery_event')
         .select(
           'id, recipient_id, event_type, gateway, occurred_at, raw_payload, pump_message_recipient(address)'
         )

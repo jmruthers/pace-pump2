@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components -- test doubles */
 // @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
@@ -45,37 +44,47 @@ vi.mock('@/components/comms/CommRbacContextProvider', () => ({
   }),
 }));
 
-vi.mock('./CommsLogTable.js', () => ({
-  CommsLogTable: ({
-    listRefreshKey,
-    onRowActivate,
-  }: {
-    listRefreshKey: number;
-    onRowActivate: (row: { id: string }) => void;
-  }) => (
+vi.mock('./CommsLogTable.js', async () => {
+  const { Button } = await vi.importActual<typeof import('@solvera/pace-core/components')>(
+    '@solvera/pace-core/components'
+  );
+  return {
+    CommsLogTable: ({
+      listRefreshKey,
+      onRowActivate,
+    }: {
+      listRefreshKey: number;
+      onRowActivate: (row: { id: string }) => void;
+    }) => (
       <div>
         <span data-testid="list-refresh-key">{listRefreshKey}</span>
-        <button
+        <Button
           type="button"
           onClick={() => onRowActivate({ id: '550e8400-e29b-41d4-a716-446655440000' })}
         >
           Open row
-        </button>
+        </Button>
       </div>
     ),
-}));
+  };
+});
 
 vi.mock('./CommsLogDrillDownDialog.js', () => ({
   CommsLogDrillDownDialog: () => null,
 }));
 
-vi.mock('./CommsLogFilters.js', () => ({
-  CommsLogFilters: ({ onRefresh }: { onRefresh: () => void }) => (
-    <button type="button" onClick={onRefresh}>
-      Refresh list
-    </button>
-  ),
-}));
+vi.mock('./CommsLogFilters.js', async () => {
+  const { Button } = await vi.importActual<typeof import('@solvera/pace-core/components')>(
+    '@solvera/pace-core/components'
+  );
+  return {
+    CommsLogFilters: ({ onRefresh }: { onRefresh: () => void }) => (
+      <Button type="button" onClick={onRefresh}>
+        Refresh list
+      </Button>
+    ),
+  };
+});
 
 vi.mock('./CommsLogCancelDialog.js', () => ({
   CommsLogCancelDialog: () => null,

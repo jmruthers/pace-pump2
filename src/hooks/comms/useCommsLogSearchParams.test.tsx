@@ -1,9 +1,9 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components -- test doubles */
 // @vitest-environment happy-dom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
+import { Button } from '@solvera/pace-core/components';
 import { useCommsLogSearchParams } from './useCommsLogSearchParams.js';
 
 const MESSAGE_UUID = '550e8400-e29b-41d4-a716-446655440000';
@@ -14,13 +14,13 @@ function SearchHarness({ mode }: { mode: 'clear' | 'set' }) {
     <div>
       <output data-testid="message-id">{state.messageId ?? ''}</output>
       {mode === 'clear' ? (
-        <button type="button" onClick={() => setMessageId(null)}>
+        <Button type="button" onClick={() => setMessageId(null)}>
           Clear message
-        </button>
+        </Button>
       ) : (
-        <button type="button" onClick={() => setMessageId(MESSAGE_UUID)}>
+        <Button type="button" onClick={() => setMessageId(MESSAGE_UUID)}>
           Set message
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/prefer-pace-core-components */
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -21,9 +20,13 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => navigateMock };
 });
 
-vi.mock('@solvera/pace-core/components', () => ({
-  toast: (...args: unknown[]) => toastMock(...args),
-}));
+vi.mock('@solvera/pace-core/components', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@solvera/pace-core/components')>();
+  return {
+    ...actual,
+    toast: (...args: unknown[]) => toastMock(...args),
+  };
+});
 
 vi.mock('@solvera/pace-core/hooks', () => ({
   useUnifiedAuth: () => ({
@@ -143,85 +146,88 @@ vi.mock('@/hooks/compose/usePumpCommSendAdapter', () => ({
   },
 }));
 
-vi.mock('@solvera/pace-core/comms', () => ({
-  useCommDraft: () => {
-    const [draft, setDraft] = useState({
-      channel: 'email',
-      body_text: draftBodyText,
-      sender_name: 'Org Comms',
-      sender_email: 'comms@example.org',
-    });
-    return { draft, setDraft, updateDraft: vi.fn() };
-  },
-  CommComposer: ({
-    onCancel,
-    onSendComplete,
-    onSendError,
-    onScheduleComplete,
-    sourceContextType,
-    rbac,
-  }: {
-    onCancel?: () => void;
-    onSendComplete?: (result: {
-      message_id: string;
-      total_recipients: number;
-      suppression_skipped: number;
-      warnings: [];
-    }) => void;
-    onSendError?: (message: string, action?: string) => void;
-    onScheduleComplete?: (payload: { scheduledAtIso: string }) => void;
-    sourceContextType?: string;
-    sourceContextId?: string;
-    rbac: { canSend: boolean };
-  }) => (
-    <section aria-label="Communication composer">
-      <span data-testid="source-context-type">{String(sourceContextType)}</span>
-      {rbac.canSend ? null : (
-        <p>You have view-only access to this message.</p>
-      )}
-      <button type="button" onClick={() => onCancel?.()}>
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          onSendComplete?.({
-            message_id: 'msg-1',
-            total_recipients: 10,
-            suppression_skipped: 0,
-            warnings: [],
-          })
-        }
-      >
-        Send now
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          onSendError?.('Cannot send to an empty pool.', 'send')
-        }
-      >
-        Trigger empty pool
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          onSendError?.('Scheduled time must be in the future.', 'schedule')
-        }
-      >
-        Trigger schedule error
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          onScheduleComplete?.({ scheduledAtIso: '2026-12-01T10:00:00.000Z' })
-        }
-      >
-        Confirm schedule
-      </button>
-    </section>
-  ),
-}));
+vi.mock('@solvera/pace-core/comms', async () => {
+  const { Button } = await vi.importActual<typeof import('@solvera/pace-core/components')>(
+    '@solvera/pace-core/components'
+  );
+  return {
+    useCommDraft: () => {
+      const [draft, setDraft] = useState({
+        channel: 'email',
+        body_text: draftBodyText,
+        sender_name: 'Org Comms',
+        sender_email: 'comms@example.org',
+      });
+      return { draft, setDraft, updateDraft: vi.fn() };
+    },
+    CommComposer: ({
+      onCancel,
+      onSendComplete,
+      onSendError,
+      onScheduleComplete,
+      sourceContextType,
+      rbac,
+    }: {
+      onCancel?: () => void;
+      onSendComplete?: (result: {
+        message_id: string;
+        total_recipients: number;
+        suppression_skipped: number;
+        warnings: [];
+      }) => void;
+      onSendError?: (message: string, action?: string) => void;
+      onScheduleComplete?: (payload: { scheduledAtIso: string }) => void;
+      sourceContextType?: string;
+      sourceContextId?: string;
+      rbac: { canSend: boolean };
+    }) => (
+      <section aria-label="Communication composer">
+        <span data-testid="source-context-type">{String(sourceContextType)}</span>
+        {rbac.canSend ? null : (
+          <p>You have view-only access to this message.</p>
+        )}
+        <Button type="button" onClick={() => onCancel?.()}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={() =>
+            onSendComplete?.({
+              message_id: 'msg-1',
+              total_recipients: 10,
+              suppression_skipped: 0,
+              warnings: [],
+            })
+          }
+        >
+          Send now
+        </Button>
+        <Button
+          type="button"
+          onClick={() => onSendError?.('Cannot send to an empty pool.', 'send')}
+        >
+          Trigger empty pool
+        </Button>
+        <Button
+          type="button"
+          onClick={() =>
+            onSendError?.('Scheduled time must be in the future.', 'schedule')
+          }
+        >
+          Trigger schedule error
+        </Button>
+        <Button
+          type="button"
+          onClick={() =>
+            onScheduleComplete?.({ scheduledAtIso: '2026-12-01T10:00:00.000Z' })
+          }
+        >
+          Confirm schedule
+        </Button>
+      </section>
+    ),
+  };
+});
 
 vi.mock('./ComposePageChrome', () => ({
   ComposePageChrome: () => (
@@ -237,28 +243,33 @@ vi.mock('./SenderIdentityBanner', () => ({
 vi.mock('./RecipientModeCard', () => ({
   RecipientModeCard: () => <section>Recipients</section>,
 }));
-vi.mock('./DiscardChangesDialog', () => ({
-  DiscardChangesDialog: ({
-    open,
-    onDiscard,
-    onOpenChange,
-  }: {
-    open: boolean;
-    onDiscard: () => void;
-    onOpenChange: (open: boolean) => void;
-  }) =>
-    open ? (
-      <div role="dialog">
-        <h2>Discard unsaved changes?</h2>
-        <button type="button" onClick={() => onOpenChange(false)}>
-          Keep editing
-        </button>
-        <button type="button" onClick={onDiscard}>
-          Discard
-        </button>
-      </div>
-    ) : null,
-}));
+vi.mock('./DiscardChangesDialog', async () => {
+  const { Button } = await vi.importActual<typeof import('@solvera/pace-core/components')>(
+    '@solvera/pace-core/components'
+  );
+  return {
+    DiscardChangesDialog: ({
+      open,
+      onDiscard,
+      onOpenChange,
+    }: {
+      open: boolean;
+      onDiscard: () => void;
+      onOpenChange: (open: boolean) => void;
+    }) =>
+      open ? (
+        <div role="dialog">
+          <h2>Discard unsaved changes?</h2>
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            Keep editing
+          </Button>
+          <Button type="button" onClick={onDiscard}>
+            Discard
+          </Button>
+        </div>
+      ) : null,
+  };
+});
 
 function renderPage() {
   return render(

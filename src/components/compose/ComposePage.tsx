@@ -61,33 +61,25 @@ function ComposePageContent() {
 
   const { draft, setDraft, updateDraft } = useCommDraft(createInitialCommDraft());
 
-  const resolvedSenderName = identityQuery.data?.senderName ?? '';
-  const resolvedFromAddress = identityQuery.data?.fromAddress ?? '';
-  const resolvedSenderPhone = identityQuery.data?.senderPhone ?? '';
-  const resolvedReplyTo = identityQuery.data?.replyToAddress ?? '';
+  const senderIdentityDraft = useMemo(() => {
+    const data = identityQuery.data;
+    if (data == null) {
+      return null;
+    }
+    return {
+      sender_name: data.senderName ?? '',
+      sender_email: data.fromAddress ?? '',
+      sender_phone: data.senderPhone ?? '',
+      reply_to: data.replyToAddress ?? '',
+    };
+  }, [identityQuery.data]);
 
   useEffect(() => {
-    if (identityQuery.isLoading || identityQuery.data == null) {
+    if (identityQuery.isLoading || senderIdentityDraft == null) {
       return;
     }
-    updateDraft({
-      sender_name: resolvedSenderName,
-      sender_email: resolvedFromAddress,
-      sender_phone: resolvedSenderPhone,
-      reply_to: resolvedReplyTo,
-    });
-  // identityQuery.data object identity changes each fetch; primitive fields are stable deps.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- BR-SenderIdentityResolution
-  }, [
-    resolvedSenderName,
-    resolvedFromAddress,
-    resolvedSenderPhone,
-    resolvedReplyTo,
-    senderContextType,
-    senderContextId,
-    updateDraft,
-    identityQuery.isLoading,
-  ]);
+    updateDraft(senderIdentityDraft);
+  }, [identityQuery.isLoading, senderIdentityDraft, updateDraft]);
 
   useEffect(() => {
     if (previousOrganisationId.current === organisationId) {
