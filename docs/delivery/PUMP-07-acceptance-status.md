@@ -82,7 +82,7 @@ Target dev-db: `yihzsfcceciimdoiibif`
 
 | Step | Result | Notes |
 | --- | --- | --- |
-| 1 OrgMembersPool preview | Pending | Redeploy `pump-resolve-pool`; JWT + `read:page.CommsLog` |
+| 1 OrgMembersPool preview | Pending | Redeploy `pump-resolve-pool`; JWT + `read:page.comms-log` |
 | 2 EventParticipants status filter | Pending | |
 | 3 pump-send happy path + gateway_message_id | Blocked | Gateway credentials + redeploy `pump-send` |
 | 4 pump-send-test happy path | Blocked | Same |

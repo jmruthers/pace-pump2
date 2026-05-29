@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState, type ReactNode } from 'react';
 import type { ButtonVariant } from '@solvera/pace-core/components';
@@ -222,7 +222,7 @@ describe('TemplateEditorDialog', () => {
   });
 
   it('shows inline name error and toast when name is empty (AC-6)', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderEditor();
     await user.click(screen.getByRole('button', { name: 'Save template' }));
     await waitFor(() => {
@@ -238,7 +238,7 @@ describe('TemplateEditorDialog', () => {
   });
 
   it('shows inline merge-token error on body when tokens are malformed (AC-8)', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(
       <TemplateEditorDialog
         mode="create"
@@ -262,7 +262,7 @@ describe('TemplateEditorDialog', () => {
   });
 
   it('keeps editor open when save rejects (AC-14)', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     onSave.mockRejectedValueOnce(new Error('Save failed'));
     render(
       <TemplateEditorDialog

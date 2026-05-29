@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { TemplatesPage } from './TemplatesPage';
@@ -56,10 +56,10 @@ vi.mock('@solvera/pace-core/rbac', () => ({
     return <>{children}</>;
   },
   useCan: (permission: string) => {
-    if (permission === 'create:page.CommsTemplates') {
+    if (permission === 'create:page.comms-templates') {
       return { can: canCreate, isLoading: false };
     }
-    if (permission === 'update:page.CommsTemplates') {
+    if (permission === 'update:page.comms-templates') {
       return { can: canUpdate, isLoading: false };
     }
     return { can: false, isLoading: false };
@@ -217,7 +217,7 @@ describe('TemplatesPage', () => {
   });
 
   it('opens retire confirmation when Retire is clicked (AC-9)', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<TemplatesPage />);
     await user.click(screen.getByRole('button', { name: /Retire Welcome/ }));
     expect(screen.getByText('Retire template?')).toBeTruthy();
@@ -225,7 +225,7 @@ describe('TemplatesPage', () => {
   });
 
   it('activates retired template without confirmation dialog (AC-10)', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     templates = [{ ...sampleRow, is_active: false, name: 'Retired tpl' }];
     render(<TemplatesPage />);
     await user.click(screen.getByLabelText('Show retired templates'));
@@ -241,7 +241,7 @@ describe('TemplatesPage', () => {
   });
 
   it('shows retired rows and Inactive badge when toggle is on (AC-15)', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     templates = [{ ...sampleRow, is_active: false, name: 'Retired tpl' }];
     render(<TemplatesPage />);
     expect(screen.queryByText('Retired tpl')).toBeNull();
@@ -251,7 +251,7 @@ describe('TemplatesPage', () => {
   });
 
   it('filters rows by search query (AC-16)', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     templates = [
       sampleRow,
       {

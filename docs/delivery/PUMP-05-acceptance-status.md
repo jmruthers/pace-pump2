@@ -50,7 +50,7 @@ Delivery: commit `05ac85a` on branch `cursor/e1a4c702` (remediation on same bran
 - [x] pace-core2 CommComposer Save Draft in linked `dist/`
 - [x] Manual member search — app-local `ManualMemberPicker` (accepted deviation)
 - [x] `pump_get_effective_sender_identity` RPC present; `recipient_pool_descriptor` nullable (MCP)
-- [ ] Org-admin CommsLog grants — assumed per backend-ready report; confirm in §12 login
+- [ ] Org-admin comms-log grants — assumed per backend-ready report; confirm in §12 login
 - [ ] `gateway_message_id` populated after send (§12 in-app)
 - [ ] Send payload invariants inspected on live Edge invoke (§12 in-app)
 

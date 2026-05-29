@@ -574,7 +574,7 @@ The `pump-webhook/{gateway}` Edge function runs under the service-role Supabase 
 |---|---|---|---|---|---|
 | Anonymous | Allowed (signature verification gates the call; verification failure → 401) | Forbidden | Forbidden | Forbidden | Forbidden |
 | Authenticated user (no PUMP grants) | n/a — webhook handler is not a SPA route | Forbidden (RLS) | Forbidden (no auth policy) | Forbidden (no auth INSERT/UPDATE/DELETE policy) | Forbidden (no auth policy) |
-| Authenticated user with `read:page.CommsLog` | n/a — webhook handler is not a SPA route | Allowed (PUMP-02 read path; not this slice's surface) | Forbidden | Forbidden | Forbidden |
+| Authenticated user with `read:page.comms-log` | n/a — webhook handler is not a SPA route | Allowed (PUMP-02 read path; not this slice's surface) | Forbidden | Forbidden | Forbidden |
 | Service role | Allowed (handler runs as service role) | Allowed | Allowed | Allowed | Allowed |
 
 ### Provider verification

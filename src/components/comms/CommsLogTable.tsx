@@ -21,6 +21,7 @@ import {
   truncateBodyPreview,
 } from '@/lib/comms/commsLogFormat.js';
 import type { CommsLogSearchState, PumpMessageRow } from '@/lib/comms/commsLogTypes.js';
+import { PUMP_PAGE } from '@/config/pumpPageNames';
 import { ChannelBadge, MessageStatusBadge } from './commsLogBadges.js';
 
 export function CommsLogTable({
@@ -48,8 +49,8 @@ export function CommsLogTable({
 }) {
   const supabase = usePumpSupabase();
   const { user } = useUnifiedAuth();
-  const { can: canUpdate } = useCan('update:page.CommsLog');
-  const { can: canDelete } = useCan('delete:page.CommsLog');
+  const { can: canUpdate } = useCan(`update:page.${PUMP_PAGE.commsLog}`);
+  const { can: canDelete } = useCan(`delete:page.${PUMP_PAGE.commsLog}`);
 
   const initialSorting = useMemo(
     () => [{ id: 'date', desc: searchState.sortDir === 'desc' }],
@@ -147,6 +148,9 @@ export function CommsLogTable({
 
   const fetchData = useCallback(
     async (params: ServerSideParams) => {
+      if (supabase == null) {
+        throw new Error('Supabase client is not available.');
+      }
       const sortDir = sortDirFromTableParams(params.sorting);
       const pageSize = normalizePageSize(params.pageSize);
       onTableParamsChange({
@@ -179,12 +183,16 @@ export function CommsLogTable({
     [onFetchError, onFetchSuccess, onTableParamsChange, organisationId, searchState, supabase]
   );
 
+  if (supabase == null) {
+    return null;
+  }
+
   return (
     <DataTable<PumpMessageRow>
       key={`${organisationId}-${listRefreshKey}-${searchState.pageIndex}-${searchState.pageSize}-${searchState.sortDir}-${searchState.channel ?? ''}-${searchState.statuses.join(',')}-${searchState.from ?? ''}-${searchState.to ?? ''}`}
       data={[]}
       columns={columns}
-      rbac={{ pageName: 'CommsLog' }}
+      rbac={{ pageName: PUMP_PAGE.commsLog }}
       initialPageSize={searchState.pageSize}
       initialSorting={initialSorting}
       getRowId={(row) => row.id}

@@ -27,7 +27,7 @@
 
 | Slice | Requirement doc | Primary DB track | Backend-owned delta (this run) |
 | --- | --- | --- | --- |
-| PU01 | PU01-app-shell-information-architecture | RBAC catalogue + org grants (`CommsLog`, `CommsTemplates`) | None (p4 + `team_batch8`) |
+| PU01 | PU01-app-shell-information-architecture | RBAC catalogue + org grants (`comms-log`, `comms-templates`) | None (p4 + `team_batch8`) |
 | PU02 | PU02-comms-log-home | `pump_message` / `pump_message_recipient` / `pump_delivery_event` read + draft DELETE; **`pump-cancel`** Edge | **PUMP-EDGE-001**, **PUMP-CODE-001** |
 | PU03 | PU03-sender-identity-contract | `pump_get_effective_sender_identity`; `pump_org_settings` FORCE RLS | **DB-PUMP-001** |
 | PU04 | PU04-template-library | `pump_organisation_templates` authenticated RLS | None (DB-410) |
@@ -58,7 +58,7 @@ Applied on target (`list_migrations`), including:
 - `20260426084500` … `cr23_pump_system_template_seeds`
 - `20260426190500` … `cr23_sender_identity_and_edge_indexes` (DB-421)
 - `20260507133830` … `team_batch4_batch5_batch6_rpc_reporting_pump_readiness` (gateway, org_settings, org template seeds)
-- `20260517025307` … `team_batch8_org_scoped_rbac_reseed` (PUMP `CommsLog` / `CommsTemplates` grants)
+- `20260517025307` … `team_batch8_org_scoped_rbac_reseed` (PUMP `comms-log` / `comms-templates` grants)
 - `20260520105941` … **`pump_org_settings_force_rls`** (**DB-PUMP-001**)
 
 Related: `20260426211000` … `base_pump_comms_log_security_invoker` (view hardening).
@@ -126,8 +126,8 @@ Deploy source: [`packages/core/supabase/functions/`](../../packages/core/supabas
 | Area | Evidence | Result |
 | --- | --- | --- |
 | PUMP app | `rbac_apps.name = 'PUMP'`, `is_active = true` | PASS |
-| PUMP pages | `CommsLog`, `CommsTemplates` (+ legacy `CreateComms`, `CommsSettings` — not consumed by PU01) | PASS |
-| Org-scoped grants | CommsLog: read/create/update/delete across orgs; CommsTemplates: CRUD where seeded | PASS |
+| PUMP pages | `comms-log`, `comms-templates`, `comms-settings` (+ legacy `CreateComms` — not consumed by PU01) | PASS |
+| Org-scoped grants | comms-log: read/create/update/delete across orgs; comms-templates: CRUD where seeded | PASS |
 | `pump_gateway_config` (active) | 2 rows | PASS |
 | `pump_org_settings` | 4 rows | PASS |
 | `pump_organisation_templates` | 8 rows | PASS |
@@ -135,7 +135,7 @@ Deploy source: [`packages/core/supabase/functions/`](../../packages/core/supabas
 
 ### Code contract (PU02 cancel OR-rule)
 
-[`packages/core/src/comms/edge-service.ts`](../../packages/core/src/comms/edge-service.ts) `pumpCancel`: denies only when `!isAuthor && !canUpdate` (author **OR** `update:page.CommsLog`). [`pump-edge.ts`](../../packages/core/supabase/functions/_shared/pump-edge.ts) `handleCancel` matches. **PUMP-CODE-001** — PASS.
+[`packages/core/src/comms/edge-service.ts`](../../packages/core/src/comms/edge-service.ts) `pumpCancel`: denies only when `!isAuthor && !canUpdate` (author **OR** `update:page.comms-log`). [`pump-edge.ts`](../../packages/core/supabase/functions/_shared/pump-edge.ts) `handleCancel` matches. **PUMP-CODE-001** — PASS.
 
 ---
 
@@ -155,7 +155,7 @@ Prior foundation (no recreation this run): p4 batches DB-404–DB-421, `team_bat
 
 | Slice | Verdict | Notes |
 | --- | --- | --- |
-| PU01 | PASS | RBAC catalogue + org-scoped `CommsLog` / `CommsTemplates` grants; no PUMP-domain DDL |
+| PU01 | PASS | RBAC catalogue + org-scoped `comms-log` / `comms-templates` grants; no PUMP-domain DDL |
 | PU02 | PASS | Read tables + RLS; draft DELETE; **`pump-cancel`** ACTIVE; cancel OR-rule in code |
 | PU03 | PASS | Sender RPC + FORCE RLS on `pump_org_settings` |
 | PU04 | PASS | `pump_organisation_templates` CRUD policies |
@@ -224,7 +224,7 @@ select ap.page_name
 from public.rbac_app_pages ap
 join public.rbac_apps a on a.id = ap.app_id
 where a.name = 'PUMP'
-  and ap.page_name in ('CommsLog', 'CommsTemplates')
+  and ap.page_name in ('comms-log', 'comms-templates')
 order by ap.page_name;
 
 -- FORCE RLS on all pump base tables

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -154,7 +154,7 @@ describe('CommsLogPage', () => {
   });
 
   it('opens drill-down when a row is activated', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
 
     await user.click(screen.getAllByRole('button', { name: 'Open row' })[0]!);
@@ -171,7 +171,7 @@ describe('CommsLogPage', () => {
   });
 
   it('renders empty state when the list has zero rows', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getAllByRole('button', { name: 'Empty list' })[0]!);
     expect(
@@ -180,7 +180,7 @@ describe('CommsLogPage', () => {
   });
 
   it('renders list error panel on fetch failure', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getAllByRole('button', { name: 'Fail list' })[0]!);
     expect(screen.getByText("Couldn't load communications.")).toBeTruthy();

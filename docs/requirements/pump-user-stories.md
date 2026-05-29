@@ -73,9 +73,9 @@ As an authorised user, I want route access controlled by page RBAC permissions, 
 
 Acceptance criteria:
 
-- `/` requires `read:page.CommsLog`.
-- `/comms/create` requires `create:page.CommsLog`.
-- `/comms/templates` requires `read:page.CommsTemplates`.
+- `/` requires `read:page.comms-log`.
+- `/comms/create` requires `create:page.comms-log`.
+- `/comms/templates` requires `read:page.comms-templates`.
 
 Source refs:
 
@@ -176,7 +176,7 @@ As an authorised operator, I want to delete eligible draft rows, so that I can r
 Acceptance criteria:
 
 - Draft delete is a normal `pump_message` delete action.
-- Delete follows existing `delete:page.CommsLog` plus tenancy/author rules.
+- Delete follows existing `delete:page.comms-log` plus tenancy/author rules.
 - Draft delete is not modelled as cancel/discard inside composer.
 
 Source refs:
@@ -335,8 +335,8 @@ As an authorised user, I want compose access separated from send authority, so t
 
 Acceptance criteria:
 
-- Route access/draft authoring uses `create:page.CommsLog`.
-- Send/schedule/test-send requires `update:page.CommsLog`.
+- Route access/draft authoring uses `create:page.comms-log`.
+- Send/schedule/test-send requires `update:page.comms-log`.
 - Edge case (implied): user can compose/save draft but cannot send/schedule/test-send without update grant.
 - Authorization uses pace-core2 RBAC contracts only; no app-specific RBAC code is introduced.
 

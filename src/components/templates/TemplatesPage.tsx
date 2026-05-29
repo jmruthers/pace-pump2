@@ -11,6 +11,7 @@ import { TemplatePreviewDialog } from './TemplatePreviewDialog';
 import { TemplateRetireDialog } from './TemplateRetireDialog';
 import { TemplatesListHeader } from './TemplatesListHeader';
 import { TemplatesListPanel } from './TemplatesListPanel';
+import { PUMP_PAGE } from '@/config/pumpPageNames';
 
 const EMPTY_FORM: TemplateFormSchemaValues = {
   name: '',
@@ -29,8 +30,8 @@ function TemplatesPageContent() {
     [organisationId]
   );
 
-  const { can: canCreate } = useCan('create:page.CommsTemplates', scope);
-  const { can: canUpdate } = useCan('update:page.CommsTemplates', scope);
+  const { can: canCreate } = useCan(`create:page.${PUMP_PAGE.commsTemplates}`, scope);
+  const { can: canUpdate } = useCan(`update:page.${PUMP_PAGE.commsTemplates}`, scope);
 
   const { data: templates = [], isLoading, isError, retry } =
     useOrganisationTemplates(organisationId);
@@ -163,7 +164,7 @@ export function TemplatesPage() {
 
   return (
     <PagePermissionGuard
-      pageName="CommsTemplates"
+      pageName="comms-templates"
       operation="read"
       scope={organisationId != null ? { organisationId } : undefined}
     >

@@ -71,12 +71,12 @@ describe('senderIdentityContract', () => {
     expect(() => assertEffectivePumpSenderIdentityShape(row)).toThrow(/Channel readiness/);
   });
 
-  it('requires resolvedOrganisationId null for platform_default', () => {
+  it('requires resolvedOrganisationId null for unresolved', () => {
     const row = sampleRow({
-      resolvedFrom: 'platform_default',
+      resolvedFrom: 'unresolved',
       resolvedOrganisationId: '11111111-1111-1111-1111-111111111111',
     });
-    expect(() => assertEffectivePumpSenderIdentityShape(row)).toThrow(/platform_default/);
+    expect(() => assertEffectivePumpSenderIdentityShape(row)).toThrow(/unresolved/);
   });
 
   describe('deriveChannelReadiness', () => {

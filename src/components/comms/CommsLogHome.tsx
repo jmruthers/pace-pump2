@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, toast } from '@solvera/pace-core/components';
+import { Button, LoadingSpinner, toast } from '@solvera/pace-core/components';
 import { Plus } from '@solvera/pace-core/icons';
 import { useUnifiedAuth } from '@solvera/pace-core/hooks';
 import { useCommsLogSearchParams } from '@/hooks/comms/useCommsLogSearchParams.js';
@@ -13,6 +13,7 @@ import {
 } from '@/hooks/comms/usePumpMessageDrillDown.js';
 import type { PumpMessageRow } from '@/lib/comms/commsLogTypes.js';
 import { useCommRbacContext } from '@/components/comms/CommRbacContextProvider.js';
+import { usePumpSupabase } from '@/hooks/comms/usePumpSupabase.js';
 import { CommsLogCancelDialog } from './CommsLogCancelDialog.js';
 import { CommsLogDeleteDialog } from './CommsLogDeleteDialog.js';
 import { CommsLogDrillDownDialog } from './CommsLogDrillDownDialog.js';
@@ -26,6 +27,7 @@ export function CommsLogHome() {
   const queryClient = useQueryClient();
   const { selectedOrganisation } = useUnifiedAuth();
   const { canCompose } = useCommRbacContext();
+  const supabase = usePumpSupabase();
   const { state, setMessageId, patchFilters, syncFromTable } = useCommsLogSearchParams();
 
   const organisationId = selectedOrganisation?.id ?? '';
@@ -114,6 +116,14 @@ export function CommsLogHome() {
 
   if (organisationId.length === 0) {
     return null;
+  }
+
+  if (supabase == null) {
+    return (
+      <main className="grid min-h-[40vh] place-items-center">
+        <LoadingSpinner />
+      </main>
+    );
   }
 
   return (

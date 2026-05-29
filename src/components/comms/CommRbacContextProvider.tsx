@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { CommRbacContext } from '@solvera/pace-core/comms';
 import { useUnifiedAuth } from '@solvera/pace-core/hooks';
 import { useCan } from '@solvera/pace-core/rbac';
+import { PUMP_PAGE } from '@/config/pumpPageNames';
 
 const CommRbacContextValue = createContext<CommRbacContext | null>(null);
 
@@ -9,8 +10,12 @@ export function CommRbacContextProvider({ children }: { children: ReactNode }) {
   const { selectedOrganisation } = useUnifiedAuth();
   const organisationId = selectedOrganisation?.id ?? '';
 
-  const { can: canComposeRaw, isLoading: composeLoading } = useCan('create:page.CommsLog');
-  const { can: canSendRaw, isLoading: sendLoading } = useCan('update:page.CommsLog');
+  const { can: canComposeRaw, isLoading: composeLoading } = useCan(
+    `create:page.${PUMP_PAGE.commsLog}`
+  );
+  const { can: canSendRaw, isLoading: sendLoading } = useCan(
+    `update:page.${PUMP_PAGE.commsLog}`
+  );
 
   const value = useMemo((): CommRbacContext => {
     const scopeReady = organisationId.length > 0;

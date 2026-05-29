@@ -19,47 +19,51 @@
 /* Suite layout width token (--app-width) is defined in pace-core core.css. Do not redefine it here. */
 
 @theme static {
-  /* main palette: primary surfaces/actions; base hue h=252.02 */
-  --color-main-raw: oklch(0.7 0.057 252.02);
-  --color-main-50: oklch(0.98 0.001 252.02);
-  --color-main-100: oklch(0.96 0.005 252.02);
-  --color-main-200: oklch(0.927 0.012 252.02);
-  --color-main-300: oklch(0.881 0.021 252.02);
-  --color-main-400: oklch(0.822 0.032 252.02);
-  --color-main-500: oklch(0.75 0.047 252.02);
-  --color-main-600: oklch(0.7 0.057 252.02);
-  --color-main-700: oklch(0.567 0.044 252.02);
-  --color-main-800: oklch(0.456 0.034 252.02);
-  --color-main-900: oklch(0.332 0.024 252.02);
-  --color-main-950: oklch(0.195 0.014 252.02);
+  /* centered layout container size */
+  --app-width: 90rem;
 
-  /* sec palette: supporting surfaces/controls; base hue h=280.75 */
-  --color-sec-raw: oklch(0.58 0.23 280.75);
-  --color-sec-50: oklch(0.98 0.003 280.75);
-  --color-sec-100: oklch(0.96 0.014 280.75);
-  --color-sec-200: oklch(0.927 0.033 280.75);
-  --color-sec-300: oklch(0.881 0.059 280.75);
-  --color-sec-400: oklch(0.822 0.093 280.75);
-  --color-sec-500: oklch(0.75 0.133 280.75);
-  --color-sec-600: oklch(0.665 0.182 280.75);
-  --color-sec-700: oklch(0.58 0.23 280.75);
-  --color-sec-800: oklch(0.456 0.158 280.75);
-  --color-sec-900: oklch(0.332 0.099 280.75);
-  --color-sec-950: oklch(0.195 0.047 280.75);
+/* pump app-main = blue */
+--color-main-raw: oklch(0.58 0.23 261.5);
+--color-main-50: oklch(0.98 0.003 261.5);
+--color-main-100: oklch(0.96 0.014 261.5);
+--color-main-200: oklch(0.927 0.033 261.5);
+--color-main-300: oklch(0.881 0.059 261.5);
+--color-main-400: oklch(0.822 0.093 261.5);
+--color-main-500: oklch(0.75 0.133 261.5);
+--color-main-600: oklch(0.665 0.182 261.5);
+--color-main-700: oklch(0.58 0.23 261.5);
+--color-main-800: oklch(0.456 0.158 261.5);
+--color-main-900: oklch(0.332 0.099 261.5);
+--color-main-950: oklch(0.195 0.047 261.5);
 
-  /* acc palette: attention/destructive emphasis; base hue h=37.76 */
-  --color-acc-raw: oklch(0.64 0.21 37.76);
-  --color-acc-50: oklch(0.98 0.003 37.76);
-  --color-acc-100: oklch(0.96 0.015 37.76);
-  --color-acc-200: oklch(0.927 0.035 37.76);
-  --color-acc-300: oklch(0.881 0.063 37.76);
-  --color-acc-400: oklch(0.822 0.099 37.76);
-  --color-acc-500: oklch(0.75 0.143 37.76);
-  --color-acc-600: oklch(0.64 0.21 37.76);
-  --color-acc-700: oklch(0.567 0.177 37.76);
-  --color-acc-800: oklch(0.456 0.13 37.76);
-  --color-acc-900: oklch(0.332 0.085 37.76);
-  --color-acc-950: oklch(0.195 0.044 37.76);
+/* pump app-sec = lightseagreen */
+--color-sec-raw: oklch(0.685 0.117 193.27);
+--color-sec-50: oklch(0.98 0.002 193.27);
+--color-sec-100: oklch(0.96 0.01 193.27);
+--color-sec-200: oklch(0.927 0.023 193.27);
+--color-sec-300: oklch(0.881 0.04 193.27);
+--color-sec-400: oklch(0.822 0.063 193.27);
+--color-sec-500: oklch(0.75 0.091 193.27);
+--color-sec-600: oklch(0.685 0.117 193.27);
+--color-sec-700: oklch(0.567 0.092 193.27);
+--color-sec-800: oklch(0.456 0.07 193.27);
+--color-sec-900: oklch(0.332 0.048 193.27);
+--color-sec-950: oklch(0.195 0.026 193.27);
+
+/* pump app-acc = medium orchid */
+--color-acc-raw: oklch(0.64 0.23 322.39);
+--color-acc-50: oklch(0.98 0.003 322.39);
+--color-acc-100: oklch(0.96 0.017 322.39);
+--color-acc-200: oklch(0.927 0.039 322.39);
+--color-acc-300: oklch(0.881 0.069 322.39);
+--color-acc-400: oklch(0.822 0.109 322.39);
+--color-acc-500: oklch(0.75 0.157 322.39);
+--color-acc-600: oklch(0.64 0.23 322.39);
+--color-acc-700: oklch(0.567 0.193 322.39);
+--color-acc-800: oklch(0.456 0.142 322.39);
+--color-acc-900: oklch(0.332 0.092 322.39);
+--color-acc-950: oklch(0.195 0.047 322.39);
+
 }
 
 .pace-background {

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Button } from '@solvera/pace-core/components';
@@ -32,7 +32,7 @@ describe('useCommsLogSearchParams', () => {
   });
 
   it('clears the message param while preserving other filters', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const router = createMemoryRouter(
       [{ path: '/', element: <SearchHarness mode="clear" /> }],
       { initialEntries: ['/?message=msg-abc&channel=email'] }
@@ -50,7 +50,7 @@ describe('useCommsLogSearchParams', () => {
   });
 
   it('sets the message param in the URL', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const router = createMemoryRouter(
       [{ path: '/', element: <SearchHarness mode="set" /> }],
       { initialEntries: ['/?channel=email'] }

@@ -34,7 +34,7 @@
 ### PUMP-01 — App shell & information architecture
 
 - authority: `[docs/requirements/PU01-app-shell-information-architecture-requirements.md](../requirements/PU01-app-shell-information-architecture-requirements.md)`
-- backend freeze: PU01 PASS per `[pump-backend-ready-report.md](pump-backend-ready-report.md)` — RBAC catalogue + org grants (`CommsLog`, `CommsTemplates`); no PUMP-domain DDL
+- backend freeze: PU01 PASS per `[pump-backend-ready-report.md](pump-backend-ready-report.md)` — RBAC catalogue + org grants (`comms-log`, `comms-templates`); no PUMP-domain DDL
 - CommRbacContext: inline provider in `src/components/comms/CommRbacContextProvider.tsx` (2026-05-20); nav permissions via `useCan` pre-filter (NavigationMenu has no guard slots)
 - QA pack: `[docs/test-packs/PUMP-01-qa-pack.md](../test-packs/PUMP-01-qa-pack.md)`
 

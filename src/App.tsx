@@ -48,7 +48,7 @@ function App() {
           <Route
             index
             element={
-              <PagePermissionGuard pageName="CommsLog" operation="read">
+              <PagePermissionGuard pageName="comms-log" operation="read">
                 <Suspense fallback={<LazyRouteFallback />}>
                   <CommsLogPage />
                 </Suspense>
@@ -58,7 +58,7 @@ function App() {
           <Route
             path="comms/create"
             element={
-              <PagePermissionGuard pageName="CommsLog" operation="create">
+              <PagePermissionGuard pageName="comms-log" operation="create">
                 <ComposeRoute />
               </PagePermissionGuard>
             }

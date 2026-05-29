@@ -16,10 +16,10 @@ vi.mock('@solvera/pace-core/hooks', () => ({
 
 vi.mock('@solvera/pace-core/rbac', () => ({
   useCan: (permission: string) => {
-    if (permission === 'create:page.CommsLog') {
+    if (permission === 'create:page.comms-log') {
       return { can: canCompose, isLoading: composeLoading };
     }
-    if (permission === 'update:page.CommsLog') {
+    if (permission === 'update:page.comms-log') {
       return { can: canSend, isLoading: sendLoading };
     }
     return { can: false, isLoading: false };

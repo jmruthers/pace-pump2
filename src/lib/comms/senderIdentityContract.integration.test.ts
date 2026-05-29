@@ -29,7 +29,7 @@ type ContractFixtures = {
   directOrg: DirectOrgSettings | null;
   ancestorChildOrgId: string | null;
   ancestorSupplierOrgId: string | null;
-  platformDefaultOrgId: string | null;
+  unresolvedOrgId: string | null;
   noSenderNameOrgId: string | null;
   eventId: string | null;
   eventOwningOrgId: string | null;
@@ -43,7 +43,7 @@ let fixtures: ContractFixtures = {
   directOrg: null,
   ancestorChildOrgId: null,
   ancestorSupplierOrgId: null,
-  platformDefaultOrgId: null,
+  unresolvedOrgId: null,
   noSenderNameOrgId: null,
   eventId: null,
   eventOwningOrgId: null,
@@ -80,7 +80,7 @@ async function discoverFixtures(admin: SupabaseClient): Promise<ContractFixtures
     directOrg: null,
     ancestorChildOrgId: null,
     ancestorSupplierOrgId: null,
-    platformDefaultOrgId: null,
+    unresolvedOrgId: null,
     noSenderNameOrgId: null,
     eventId: null,
     eventOwningOrgId: null,
@@ -192,8 +192,8 @@ async function discoverFixtures(admin: SupabaseClient): Promise<ContractFixtures
     });
     if (error == null) {
       const resolved = coerceEffectivePumpSenderIdentityRow(data);
-      if (resolved?.resolvedFrom === 'platform_default') {
-        result.platformDefaultOrgId = orgId;
+      if (resolved?.resolvedFrom === 'unresolved') {
+        result.unresolvedOrgId = orgId;
         if (result.callerOrgId == null) {
           result.callerOrgId = orgId;
         }
@@ -331,19 +331,19 @@ describe.skipIf(!liveEnv)('pump_get_effective_sender_identity contract (live dev
     expect(row.sourceContextId).toBe(fixtures.eventId);
   });
 
-  it('(2d) platform_default fallback', async () => {
-    if (fixtures.platformDefaultOrgId == null || publishableClient == null) {
+  it('(2d) unresolved fallback when no settings tier matches', async () => {
+    if (fixtures.unresolvedOrgId == null || publishableClient == null) {
       return;
     }
 
     const { data, error } = await invokeSenderIdentity(
       publishableClient,
-      fixtures.platformDefaultOrgId
+      fixtures.unresolvedOrgId
     );
     expect(error).toBeNull();
     const row = expectSingleSenderIdentityRow(data);
     assertEffectivePumpSenderIdentityShape(row);
-    expect(row.resolvedFrom).toBe('platform_default');
+    expect(row.resolvedFrom).toBe('unresolved');
     expect(row.resolvedOrganisationId).toBeNull();
   });
 

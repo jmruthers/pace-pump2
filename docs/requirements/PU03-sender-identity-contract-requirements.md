@@ -46,7 +46,7 @@ This slice owns no UI route and no SPA component. Its surface is:
 
 - Mutation contract: **none owned by this slice.** PUMP-03 is read-only from PUMP's perspective. Updates to `pump_org_settings` are platform-managed.
 - Read contract: a single SECURITY DEFINER RPC returning the canonical sender-identity row. Consumers must not reconstruct the fallback chain themselves.
-- Caller authorisation: the RPC does not enforce caller-side RBAC (see §6 BR-CallerAuthorisation). The consuming surface is responsible for page-level access — PUMP-05's `/comms/create` route is wrapped by `PagePermissionGuard` (`pageName='CommsLog'`, `operation='create'`) per PDLC's RBAC API usage contract; PUMP Edge invokes the RPC under the service-role client.
+- Caller authorisation: the RPC does not enforce caller-side RBAC (see §6 BR-CallerAuthorisation). The consuming surface is responsible for page-level access — PUMP-05's `/comms/create` route is wrapped by `PagePermissionGuard` (`pageName='comms-log'`, `operation='create'`) per PDLC's RBAC API usage contract; PUMP Edge invokes the RPC under the service-role client.
 - Single-contract rule: compose-time display (PUMP-05) and send-time validation (PUMP Edge `pump-send` / `pump-send-test` / `pump-schedule`) call the same RPC and consume identical `EffectivePumpSenderIdentity` rows. Send-time validation re-resolves; the SPA's compose-time row is not trusted as input to validation.
 
 ### Page-level guards and evaluation ordering
@@ -180,7 +180,7 @@ The RPC does not enforce caller-side RBAC. It is `SECURITY DEFINER STABLE` with 
 
 Authorisation is the responsibility of the consuming surface:
 
-- **PUMP-05** (the `/comms/create` route) gates access via `PagePermissionGuard` per the PDLC RBAC API usage contract (`pageName='CommsLog'`, `operation='create'`). Operators without `create:page.CommsLog` never reach the compose surface and therefore never invoke the RPC from PUMP.
+- **PUMP-05** (the `/comms/create` route) gates access via `PagePermissionGuard` per the PDLC RBAC API usage contract (`pageName='comms-log'`, `operation='create'`). Operators without `create:page.comms-log` never reach the compose surface and therefore never invoke the RPC from PUMP.
 - **PUMP Edge** (`pump-send`, `pump-send-test`, `pump-schedule`, `pump-resolve-pool` and related functions) invokes the RPC under the service-role client; service-role calls bypass RLS by design. Edge separately validates the caller's `source_context_id` and other pool / send-time inputs before performing the RPC call.
 - Any other consuming SPA surface (a future PUMP page or another suite app reading the contract directly) must apply its own page-level guard before calling the RPC.
 
@@ -275,7 +275,7 @@ n/a — PUMP-03 owns no write path. The `pump_org_settings` table backing the re
 
 - **RPC-side:** none — RPC body contains no RBAC checks.
 - **Underlying table (`pump_org_settings`):** RLS-enabled (with row-level policies present per platform-snapshot-2026-05-07 §RLS), but the SECURITY DEFINER RPC bypasses RLS for read purposes. PUMP SPA does not query the table directly under any circumstance.
-- **Caller-side gating:** lives at the consuming surface. PUMP-05 wraps `/comms/create` with `PagePermissionGuard` (`pageName='CommsLog'`, `operation='create'`); Edge invocations are service-role.
+- **Caller-side gating:** lives at the consuming surface. PUMP-05 wraps `/comms/create` with `PagePermissionGuard` (`pageName='comms-log'`, `operation='create'`); Edge invocations are service-role.
 
 ### Cross-slice handoffs
 
@@ -348,7 +348,7 @@ The RPC `pump_get_effective_sender_identity` is `SECURITY DEFINER STABLE` with n
 
 | Surface that calls the RPC | Required gating | Owner of the gate |
 |---|---|---|
-| `/comms/create` (compose surface) | `PagePermissionGuard` with `pageName='CommsLog'`, `operation='create'` per the PDLC RBAC API usage contract | PUMP-05 (this slice does not own the page route). PUMP-05's own §10 carries the route-guard test |
+| `/comms/create` (compose surface) | `PagePermissionGuard` with `pageName='comms-log'`, `operation='create'` per the PDLC RBAC API usage contract | PUMP-05 (this slice does not own the page route). PUMP-05's own §10 carries the route-guard test |
 | PUMP Edge `pump-send`, `pump-send-test`, `pump-schedule`, pool resolution | Service role; Edge separately validates `source_context_id` and pool inputs against the caller's scope | PUMP Edge (PUMP-05 / PUMP-06) |
 | Any other suite consumer | Page-level guard appropriate to that surface, applied before RPC invocation | The consuming app / slice |
 
@@ -359,8 +359,8 @@ There are no operator-facing actions on this slice. The matrix below records the
 | Role | RPC read | Underlying `pump_org_settings` write |
 |---|---|---|
 | Authenticated user (no PUMP grants) | Allowed by the RPC; intended access depends on consuming surface's gate | Forbidden — no PUMP UI provides a write path; underlying table writes are platform-managed |
-| Authenticated user with `read:page.CommsLog` (PUMP-02 / PUMP-05 viewer) | Allowed | Forbidden — same as above |
-| Authenticated user with `create:page.CommsLog` (PUMP-05 composer) | Allowed via `/comms/create` route | Forbidden — same as above |
+| Authenticated user with `read:page.comms-log` (PUMP-02 / PUMP-05 viewer) | Allowed | Forbidden — same as above |
+| Authenticated user with `create:page.comms-log` (PUMP-05 composer) | Allowed via `/comms/create` route | Forbidden — same as above |
 | Service role (Edge) | Allowed (`pump-send` / `pump-send-test` / `pump-schedule` / pool resolution) | Allowed at the table level, but PUMP Edge has no write path to `pump_org_settings` in v1 — that table is platform-managed outside PUMP |
 
 ### Compose-time display posture
@@ -381,7 +381,7 @@ PUMP-03's acceptance is contract-shape, not user-action. Each criterion is verif
 - [x] **AC-4** — **Given** the RPC is called with `organisation_id` for an org that has `default_sender_name` populated but no `default_from_address`, **when** the call returns, **then** `canSendEmail = false` even though `senderName` is non-null, while `canSendSms` is determined independently by the `senderPhone` value. (Traces §4 item 12; §6 BR-CanSendEmail, BR-ReplyToOptional.) — *Integration `(5)`.*
 - [x] **AC-5** — **Given** the RPC is called with `source_context_type = 'event'` and a valid `source_context_id` referencing an event whose owning organisation has its own `pump_org_settings` row, **when** the call returns, **then** `resolvedFrom = 'source_context'`, `resolvedOrganisationId` is the event's owning organisation id (which may differ from the caller's `organisation_id` argument), and `sourceContextType` / `sourceContextId` echo the input arguments. (Traces §4 items 8, 15; §6 BR-ResolutionOrder, BR-SourceContextEcho.) — *Integration `(2c)`.*
 - [x] **AC-6** — **Given** the RPC is called with `source_context_type = 'organisation'` and `source_context_id = NULL` (a partial pair), **when** the call returns, **then** the call succeeds without raising, `resolvedFrom` is one of `'organisation' | 'ancestor' | 'platform_default'` (never `'source_context'`), and the response's `sourceContextType` field echoes the literal input `'organisation'` while `sourceContextId` is `null`. (Traces §4 item 16; §6 BR-PartialSourceContext, BR-SourceContextEcho.) — *Integration `(3)`.*
-- [x] **AC-7** — **Given** the RPC is called by an authenticated user with **no** PUMP RBAC grants whatsoever (no `read:page.CommsLog`, no `create:page.CommsLog`), **when** the call is made directly against the database with a valid `organisation_id`, **then** the call succeeds and returns a sender-identity row. (Traces §4 item 4; §6 BR-CallerAuthorisation. Caller-side gating is verified separately at consuming surfaces — PUMP-05's own §10 carries the `/comms/create` route-guard denial test.) — *Integration `(4)` when `PUMP_CONTRACT_TEST_EMAIL` / `PASSWORD` set per [`PUMP-03-contract-test-user.md`](../delivery/PUMP-03-contract-test-user.md); env-gated (skipped in CI).*
+- [x] **AC-7** — **Given** the RPC is called by an authenticated user with **no** PUMP RBAC grants whatsoever (no `read:page.comms-log`, no `create:page.comms-log`), **when** the call is made directly against the database with a valid `organisation_id`, **then** the call succeeds and returns a sender-identity row. (Traces §4 item 4; §6 BR-CallerAuthorisation. Caller-side gating is verified separately at consuming surfaces — PUMP-05's own §10 carries the `/comms/create` route-guard denial test.) — *Integration `(4)` when `PUMP_CONTRACT_TEST_EMAIL` / `PASSWORD` set per [`PUMP-03-contract-test-user.md`](../delivery/PUMP-03-contract-test-user.md); env-gated (skipped in CI).*
 - [x] **AC-8** — **Given** the RPC is called with `source_context_type = NULL` and `source_context_id = NULL`, **when** the call returns, **then** the response's `sourceContextType` and `sourceContextId` fields are both `null`, regardless of which tier supplies the resolution. (Traces §4 item 8; §6 BR-SourceContextEcho.) — *Integration `(3)` + `(2a)`.*
 - [x] **AC-9** — **Given** every tier of the resolution chain has settings rows but none has `default_sender_name`, **when** the RPC is called for any in-suite organisation, **then** `senderName` is `null`, `canSendEmail` is `false`, and the row still returns successfully (no error raised) — i.e. "no value resolved at any tier" is a valid result. (Traces §4 item 9; §6 BR-FieldShape, BR-CanSendEmail.) — *Integration `(9)` when RPC probe finds org with `senderName = null`.*
 - [ ] **AC-10** — **Given** PUMP Edge has just resolved a row with `canSendEmail = true` for an email send, **when** the resulting `pump_message` row is inspected, **then** its `sender_name`, `sender_email`, and (if applicable) `reply_to_email` columns equal the values returned by that RPC invocation, not any SPA-supplied state. (Traces §4 items 18, 19; §6 BR-PersistedSenderMatchesContract.) — ***Sibling:** PUMP-07 / pace-core2 Edge.*
@@ -441,7 +441,7 @@ n/a — PDLC's "Slice done" definition does not strictly apply to a contract-onl
 - Do not duplicate the resolution chain in JavaScript / TypeScript on the SPA side. Compose-time display reads the RPC result; send-time validation re-invokes the same RPC under service role.
 - Do not smuggle legacy email-shell HTML (`email_header_html`, `email_footer_html`, `sms_messaging_service_sid`, `sms_opt_out_footer`) back into the sender-identity contract; the platform-owned email shell is sourced separately and is out of scope here.
 - Do not change the contract (RPC signature, return shape, resolution order, echo property, channel-readiness rules, RBAC posture) without a coordinated migration of PUMP-05 and PUMP Edge in the same merge.
-- Do not adopt the dev-db `CommsSettings` page key as a v1 PUMP route — it persists in `rbac_app_pages` for platform / future use only.
+- Do not adopt the `comms-settings` page key as a v1 PUMP route — it persists in `rbac_app_pages` for platform / future use only.
 - Do not invent a fallback path for the SPA to read `pump_org_settings` directly when the RPC returns `null` sender fields — "no value resolved at any tier" is a valid contract result and surfaces as `canSendEmail = false` / `canSendSms = false`, not as an error condition the SPA can repair.
 
 ---

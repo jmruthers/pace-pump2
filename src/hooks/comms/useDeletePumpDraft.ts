@@ -13,6 +13,9 @@ export function useDeletePumpDraft(onListRefresh?: () => void) {
 
   return useMutation({
     mutationFn: async ({ messageId }: DeleteInput) => {
+      if (supabase == null) {
+        throw new Error('Supabase client is not available.');
+      }
       const userId = user?.id;
       if (userId == null) {
         throw new Error('Not signed in.');

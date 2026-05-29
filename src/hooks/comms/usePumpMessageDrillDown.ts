@@ -19,9 +19,9 @@ export function usePumpMessageById(messageId: string | null, enabled: boolean) {
 
   return useQuery({
     queryKey: ['pumpMessage', messageId],
-    enabled: enabled && messageId != null && isValidUuid(messageId),
+    enabled: enabled && supabase != null && messageId != null && isValidUuid(messageId),
     queryFn: async (): Promise<PumpMessageRow | null> => {
-      const { data, error } = await pumpFrom(supabase, 'pump_message')
+      const { data, error } = await pumpFrom(supabase!, 'pump_message')
         .select('*')
         .eq('id', messageId!)
         .maybeSingle();
@@ -38,9 +38,9 @@ export function usePumpMessageRecipients(messageId: string | null, enabled: bool
 
   return useQuery({
     queryKey: pumpRecipientsQueryKey(messageId ?? ''),
-    enabled: enabled && messageId != null && isValidUuid(messageId),
+    enabled: enabled && supabase != null && messageId != null && isValidUuid(messageId),
     queryFn: async (): Promise<PumpMessageRecipientRow[]> => {
-      const { data, error } = await pumpFrom(supabase, 'pump_message_recipient')
+      const { data, error } = await pumpFrom(supabase!, 'pump_message_recipient')
         .select(
           'id, message_id, member_id, address, status, delivered_at, opened_at, clicked_at, failed_at, failure_reason, core_member(full_name)'
         )
@@ -59,10 +59,10 @@ export function usePumpDeliveryEvents(messageId: string | null, enabled: boolean
 
   return useQuery({
     queryKey: pumpDeliveryEventsQueryKey(messageId ?? ''),
-    enabled: enabled && messageId != null && isValidUuid(messageId),
+    enabled: enabled && supabase != null && messageId != null && isValidUuid(messageId),
     queryFn: async (): Promise<PumpDeliveryEventRow[]> => {
       const { data: recipients, error: recipientError } = await pumpFrom(
-        supabase,
+        supabase!,
         'pump_message_recipient'
       )
         .select('id')
@@ -75,7 +75,7 @@ export function usePumpDeliveryEvents(messageId: string | null, enabled: boolean
         return [];
       }
 
-      const { data, error } = await pumpFrom(supabase, 'pump_delivery_event')
+      const { data, error } = await pumpFrom(supabase!, 'pump_delivery_event')
         .select(
           'id, recipient_id, event_type, gateway, occurred_at, raw_payload, pump_message_recipient(address)'
         )

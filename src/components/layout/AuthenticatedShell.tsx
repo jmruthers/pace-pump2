@@ -16,12 +16,19 @@ import { useCan } from '@solvera/pace-core/rbac';
 import { useUnifiedAuth } from '@solvera/pace-core/hooks';
 import { APP_NAME } from '@/appName';
 import { PUMP_NAV_ITEMS } from '@/config/navItems';
+import { PUMP_PAGE } from '@/config/pumpPageNames';
 import { CommRbacContextProvider } from '@/components/comms/CommRbacContextProvider';
 
 function usePumpNavItems(allItems: NavigationItem[]): NavigationItem[] {
-  const { can: canReadCommsLog, isLoading: readLogLoading } = useCan('read:page.CommsLog');
-  const { can: canCompose, isLoading: composeLoading } = useCan('create:page.CommsLog');
-  const { can: canReadTemplates, isLoading: templatesLoading } = useCan('read:page.CommsTemplates');
+  const { can: canReadCommsLog, isLoading: readLogLoading } = useCan(
+    `read:page.${PUMP_PAGE.commsLog}`
+  );
+  const { can: canCompose, isLoading: composeLoading } = useCan(
+    `create:page.${PUMP_PAGE.commsLog}`
+  );
+  const { can: canReadTemplates, isLoading: templatesLoading } = useCan(
+    `read:page.${PUMP_PAGE.commsTemplates}`
+  );
 
   return useMemo(() => {
     if (readLogLoading || composeLoading || templatesLoading) {

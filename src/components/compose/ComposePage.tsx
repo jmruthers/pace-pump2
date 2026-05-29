@@ -264,7 +264,7 @@ export function ComposePage() {
 
   return (
     <PagePermissionGuard
-      pageName="CommsLog"
+      pageName="comms-log"
       operation="read"
       scope={organisationId != null ? { organisationId } : undefined}
     >

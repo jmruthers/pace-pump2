@@ -27,7 +27,7 @@ PUMP-05 mounts the composer surface at `/comms/create` inside the route shell PU
 
 ### Purpose
 
-A single screen that lets an operator with `create:page.CommsLog` and `update:page.CommsLog` build and dispatch a one-off broadcast. The slice covers compose, recipient targeting, preview, send, schedule, send-test, save-draft, and cancel. Template authoring, scheduled-message lifecycle management, gateway configuration, suppression administration, and delivery analytics are out of scope.
+A single screen that lets an operator with `create:page.comms-log` and `update:page.comms-log` build and dispatch a one-off broadcast. The slice covers compose, recipient targeting, preview, send, schedule, send-test, save-draft, and cancel. Template authoring, scheduled-message lifecycle management, gateway configuration, suppression administration, and delivery analytics are out of scope.
 
 ### Surfaces
 
@@ -42,7 +42,7 @@ PUMP-01 mounts the route via `<PagePermissionGuard>` and the application chrome 
 
 PUMP-05 does **not** own:
 
-- Route registration, lazy import, `<Suspense>` boundary, `<PagePermissionGuard pageName="CommsLog" operation="create">` mount, `<CommRbacContextProvider>` mount, application-chrome `<PaceAppLayout>` (header / navigation menu) — all owned by PUMP-01.
+- Route registration, lazy import, `<Suspense>` boundary, `<PagePermissionGuard pageName="comms-log" operation="create">` mount, `<CommRbacContextProvider>` mount, application-chrome `<PaceAppLayout>` (header / navigation menu) — all owned by PUMP-01.
 - `<ToastProvider>` mount — owned by PUMP-01.
 - Template CRUD (`pump_organisation_templates` writes), strict-mode toggle authoring — owned by PUMP-04. PUMP-05 reads templates exclusively via the adapter.
 - The `pump_get_effective_sender_identity(...)` RPC contract — PUMP-03 prerequisite.
@@ -68,7 +68,7 @@ PUMP-05 does **not** own:
 
 The adapter is mounted with these derived values. There is no separate event picker or context selector. The composer remounts when the pool's source-context changes.
 
-**Page guard mount lives in PUMP-01.** `/comms/create` is wrapped by `<PagePermissionGuard pageName="CommsLog" operation="create">` mounted by PUMP-01. PUMP-05 does not re-mount the guard.
+**Page guard mount lives in PUMP-01.** `/comms/create` is wrapped by `<PagePermissionGuard pageName="comms-log" operation="create">` mounted by PUMP-01. PUMP-05 does not re-mount the guard.
 
 **RBAC context is app-local.** PUMP-05 calls `useCommRbacContext()` to read `{ canCompose, canSend, canSchedule, scopeType, scopeId }`. The hook is published by PUMP-01 (an app-local provider; pace-core2 publishes only the `CommRbacContext` type today — see §9.1). The slice does not call `useCan` for these booleans directly.
 
@@ -85,7 +85,7 @@ The route `/comms/create` evaluates these layers in order when context is absent
 1. **Authentication.** PUMP-01's `ProtectedRoute` redirects unauthenticated users to `/login`. The page guard never evaluates.
 2. **Org context.** PUMP-01's organisation context provider resolves the operator's selected organisation. While loading, PUMP-01 renders its loading state; the page body does not mount.
 3. **No-org check.** When the organisation context resolves and `selectedOrganisation === null`, PUMP-01 renders its "no organisation" empty state. `<PagePermissionGuard>` is not reached; no RBAC query fires.
-4. **Page permission guard.** Once org context is resolved, PUMP-01's `<PagePermissionGuard pageName="CommsLog" operation="create">` evaluates. Scope resolves internally from the organisation context; PUMP-05 passes no `scope` prop. While the RBAC check is in flight (`isLoading === true`), the guard returns `null` — a brief blank inside the page content area is acceptable. On `can === false`, PUMP-01's `<AccessDenied>` is rendered. On `can === true`, PUMP-05's page body renders.
+4. **Page permission guard.** Once org context is resolved, PUMP-01's `<PagePermissionGuard pageName="comms-log" operation="create">` evaluates. Scope resolves internally from the organisation context; PUMP-05 passes no `scope` prop. While the RBAC check is in flight (`isLoading === true`), the guard returns `null` — a brief blank inside the page content area is acceptable. On `can === false`, PUMP-01's `<AccessDenied>` is rendered. On `can === true`, PUMP-05's page body renders.
 
 If `selectedOrganisation` resolves to `null` after step 3 (a race during org switch), the RBAC engine evaluates with `organisationId: undefined`, the check returns pending, and the guard returns `null`. Step 3 prevents this path under normal conditions.
 
@@ -99,7 +99,7 @@ Items are numbered with the prefix matching their sub-pass. Each item is testabl
 
 #### Page entry
 
-- **A-01** The route `/comms/create` renders for an authenticated user whose currently selected organisation has resolved and who has `create:page.CommsLog` permission. The route is reached either from PUMP-02's "New message" / "Compose" CTA or from direct URL entry.
+- **A-01** The route `/comms/create` renders for an authenticated user whose currently selected organisation has resolved and who has `create:page.comms-log` permission. The route is reached either from PUMP-02's "New message" / "Compose" CTA or from direct URL entry.
 - **A-02** On entry, the page mounts the page-level content inside PUMP-01's `<PaceAppLayout>` main content area (heading "Compose", subtitle "Send a message to members of <organisation name>", breadcrumb "Comms log / Compose" with `Comms log` linking to `/`, top "Back to comms log" link with `<ChevronLeft>` icon). PUMP-01 provides the surrounding application chrome (`<PaceAppLayout>`, header, navigation menu); PUMP-05 mounts the page-level content within `<main>` for `/comms/create`.
 - **A-03** The page calls `useCommRbacContext()` (published by PUMP-01) to obtain the current `CommRbacContext` and consumes `canCompose`, `canSend`, `canSchedule`, `scopeType`, `scopeId`.
 - **A-04** On mount with a resolved organisation, the page calls `pump_get_effective_sender_identity(p_organisation_id := <orgId>, p_source_context_type := <derived>, p_source_context_id := <derived>)` via `useSecureSupabase().rpc(...)` to obtain the effective sender identity. The returned `EffectivePumpSenderIdentity` shape is destructured directly. `resolvedFrom` is captured for the audit display.
@@ -165,9 +165,9 @@ Items are numbered with the prefix matching their sub-pass. Each item is testabl
 
 #### Permission-conditional rendering
 
-- **A-46** When `read:page.CommsLog` is denied, PUMP-01's `<AccessDenied>` renders inside the page guard; PUMP-05 mounts no content.
-- **A-47** When `read:page.CommsLog` is allowed but `create:page.CommsLog` is denied (`canCompose === false`), the composer renders its read-only banner; the slice's recipient-mode card and sender-identity banner remain visible (read-only context still surfaces). The Save draft button hides (no editable draft is reachable). Send / Schedule / Send test are also unavailable.
-- **A-48** When `read:page.CommsLog` and `create:page.CommsLog` are allowed but `update:page.CommsLog` is denied (`canSend === false`), the composer renders the read-only banner and the CardFooter renders a single read-only `<Alert>` "You have view-only access to this message." Save draft remains available because draft authorship is gated by `create:page.CommsLog` and the per-row owner-update RLS policy on `pump_message`.
+- **A-46** When `read:page.comms-log` is denied, PUMP-01's `<AccessDenied>` renders inside the page guard; PUMP-05 mounts no content.
+- **A-47** When `read:page.comms-log` is allowed but `create:page.comms-log` is denied (`canCompose === false`), the composer renders its read-only banner; the slice's recipient-mode card and sender-identity banner remain visible (read-only context still surfaces). The Save draft button hides (no editable draft is reachable). Send / Schedule / Send test are also unavailable.
+- **A-48** When `read:page.comms-log` and `create:page.comms-log` are allowed but `update:page.comms-log` is denied (`canSend === false`), the composer renders the read-only banner and the CardFooter renders a single read-only `<Alert>` "You have view-only access to this message." Save draft remains available because draft authorship is gated by `create:page.comms-log` and the per-row owner-update RLS policy on `pump_message`.
 
 ### PUMP-05B — Send / Schedule / Send-test pipeline + result UX
 
@@ -355,20 +355,20 @@ A modal `<Dialog>` (`@solvera/pace-core/components` `<Dialog>` family — `<Dial
 |---|---|---|---|---|---|---|
 | Not authenticated | Redirect to `/login` (PUMP-01) | n/a | n/a | n/a | n/a | n/a |
 | Authenticated, no org | PUMP-01 no-org empty state | n/a | n/a | n/a | n/a | n/a |
-| `read:page.CommsLog` denied → `create:page.CommsLog` denied | PUMP-01 `<AccessDenied>` | hidden | hidden | hidden | hidden | hidden |
-| `create:page.CommsLog` allowed, `update:page.CommsLog` denied | Visible | Visible | Visible | Read-only banner; inputs disabled | Visible (per draft-owner RLS) | Composer footer shows read-only Alert; no Send / Schedule / Send test |
-| `create:page.CommsLog` and `update:page.CommsLog` allowed | Visible | Visible | Visible | Editable | Visible | All four buttons render with normal gating |
+| `read:page.comms-log` denied → `create:page.comms-log` denied | PUMP-01 `<AccessDenied>` | hidden | hidden | hidden | hidden | hidden |
+| `create:page.comms-log` allowed, `update:page.comms-log` denied | Visible | Visible | Visible | Read-only banner; inputs disabled | Visible (per draft-owner RLS) | Composer footer shows read-only Alert; no Send / Schedule / Send test |
+| `create:page.comms-log` and `update:page.comms-log` allowed | Visible | Visible | Visible | Editable | Visible | All four buttons render with normal gating |
 
 ---
 
 ## §6 Business rules
 
-**BR-RouteGate** — Access to `/comms/create` requires `create:page.CommsLog`. PUMP-01 mounts the page guard; PUMP-05 does not re-mount.
+**BR-RouteGate** — Access to `/comms/create` requires `create:page.comms-log`. PUMP-01 mounts the page guard; PUMP-05 does not re-mount.
 
-**BR-CommRbacContext** — Derived from page grants on `CommsLog` (provider mounted by PUMP-01 — see PUMP-01 §7 cross-slice handoffs for the published hook signature):
-- `canCompose` ← `create:page.CommsLog`
-- `canSend` ← `update:page.CommsLog`
-- `canSchedule` ← `update:page.CommsLog`
+**BR-CommRbacContext** — Derived from page grants on `comms-log` (provider mounted by PUMP-01 — see PUMP-01 §7 cross-slice handoffs for the published hook signature):
+- `canCompose` ← `create:page.comms-log`
+- `canSend` ← `update:page.comms-log`
+- `canSchedule` ← `update:page.comms-log`
 - `scopeType = 'organisation'`, `scopeId = selectedOrganisation.id`.
 
 **BR-RbacGating** — The composer renders its read-only banner when `!canCompose || !canSend`, and the CardFooter's read-only Alert in place of Send / Schedule / Send test when `!canSend`. The Schedule button is composer-disabled when `!rbac.canSchedule || blockForUnresolved`. UI gating is UX only; Edge re-checks `isPermitted` and re-validates context.
@@ -468,7 +468,7 @@ PUMP-05 publishes no symbols for other slices to import. The composer surface li
 
 ### Write contracts
 
-- **Save draft (app-local).** `useSecureSupabase().from('pump_message').upsert({ id, organisation_id, channel, subject?, body_html?, body_text, sender_name, sender_email?, sender_phone?, reply_to_email?, template_id?, recipient_pool_descriptor: <json | null>, source_app: 'pump', source_context_type?, source_context_id?, extra_merge_context, bypass_suppression: false, status: 'draft', created_by })`. INSERT path is gated by RLS `rbac_insert_pump_message` (`create:page.CommsLog`). UPDATE path is gated by RLS `rbac_draft_owner_update_pump_message` (draft owner) OR `rbac_update_pump_message` (`update:page.CommsLog`).
+- **Save draft (app-local).** `useSecureSupabase().from('pump_message').upsert({ id, organisation_id, channel, subject?, body_html?, body_text, sender_name, sender_email?, sender_phone?, reply_to_email?, template_id?, recipient_pool_descriptor: <json | null>, source_app: 'pump', source_context_type?, source_context_id?, extra_merge_context, bypass_suppression: false, status: 'draft', created_by })`. INSERT path is gated by RLS `rbac_insert_pump_message` (`create:page.comms-log`). UPDATE path is gated by RLS `rbac_draft_owner_update_pump_message` (draft owner) OR `rbac_update_pump_message` (`update:page.comms-log`).
 - **Send.** `adapter.send(request: CommSendRequest)` → `ApiResult<CommSendResult>`. Edge slug `pump-send`. Invariants: `request.source_app === 'pump'`, `request.organisation_id === selectedOrganisation.id`, `request.bypass_suppression` omitted, source-context per BR-SourceContextDerivation.
 - **Schedule.** `adapter.schedule(request: CommScheduleRequest)` → `ApiResult<CommScheduleResult>`. Edge slug `pump-schedule`. Same shape + `scheduled_at` (ISO 8601). Same invariants.
 - **Send test.** `adapter.sendTest(request: CommSendTestRequest)` → `ApiResult<CommSendResult>`. Edge slug `pump-send-test`. OMITS `pool`, `system_key`, `system_recipient`, `bypass_suppression`. Destination resolved server-side from the signed-in user.
@@ -498,9 +498,9 @@ PUMP-05 publishes no symbols for other slices to import. The composer surface li
 
 | Table | Use | RLS | Verification target |
 |---|---|---|---|
-| `pump_message` | INSERT (Save draft, first save). UPDATE (Save draft, subsequent saves, draft owner OR `update:page.CommsLog`). | `rbac_insert_pump_message`, `rbac_draft_owner_update_pump_message`, `rbac_update_pump_message`, `rbac_select_*`, `rbac_delete_pump_message`. | `recipient_pool_descriptor` confirmed nullable on dev-db (drift from architecture; PUMP-05 authors against nullable). NOT NULL columns: `organisation_id`, `channel`, `body_text`, `sender_name`, `source_app`, `status`. |
+| `pump_message` | INSERT (Save draft, first save). UPDATE (Save draft, subsequent saves, draft owner OR `update:page.comms-log`). | `rbac_insert_pump_message`, `rbac_draft_owner_update_pump_message`, `rbac_update_pump_message`, `rbac_select_*`, `rbac_delete_pump_message`. | `recipient_pool_descriptor` confirmed nullable on dev-db (drift from architecture; PUMP-05 authors against nullable). NOT NULL columns: `organisation_id`, `channel`, `body_text`, `sender_name`, `source_app`, `status`. |
 | `pump_message_recipient` | NEVER from SPA. Edge-only. | `rbac_select_pump_message_recipient` only. | n/a. |
-| `pump_organisation_templates` | NEVER directly from PUMP-05. Read via `adapter.loadTemplates` (Edge `pump-load-templates`). | `rbac_select_pump_organisation_templates` (`read:page.CommsTemplates`). | Adapter contract; build prerequisite for Edge deployment. |
+| `pump_organisation_templates` | NEVER directly from PUMP-05. Read via `adapter.loadTemplates` (Edge `pump-load-templates`). | `rbac_select_pump_organisation_templates` (`read:page.comms-templates`). | Adapter contract; build prerequisite for Edge deployment. |
 | `pump_org_settings` | Not directly read. Sender identity flows through `pump_get_effective_sender_identity(...)`. | n/a — no v1 PUMP UI. | n/a. |
 | `pump_suppression` | Not directly read. Edge consults at send time. | Service-role only. | `CommSendResult.suppression_skipped` reflects Edge-side skips. |
 | `core_member` (via `core_person`) | SELECT for the Manual-mode type-ahead. | Standard org-scoped RLS on `core_member`. | Confirm `core_member` and `core_person` joins return the expected display fields for the demo org. |
@@ -590,7 +590,7 @@ All six PUMP Edge functions deploy together before PUMP-05 build merges (per pla
 - **`useCommDraft` instantiation and sender-identity seeding.** PUMP-05 instantiates `useCommDraft()` at composer mount and seeds the initial draft with the resolved sender identity from `pump_get_effective_sender_identity(...)` (`sender_name`, `sender_email`, `sender_phone`, `reply_to`). The hook's returned `draft` and `setDraft` are passed to `<CommComposer>`. The slice computes its own dirty flag for the Cancel Dialog by comparing the current draft against the last-saved baseline (per BR-DirtyFlagDerivation), independent of the hook's internal `isDirty` if any.
 - **`<CommComposer>` `senderIdentityReadOnly` UX gap.** v1 surfaces the resolved sender via the slice-rendered banner above the composer. Composer's own sender inputs technically remain editable; Edge re-validates and silently uses the server-resolved values on send. The pace-core2 `senderIdentityReadOnly` (or `lockSenderIdentity`) enhancement is consolidated in §17's pace-core2 PR proposal. Do not invent an inline lock prop; consume the enhancement when it lands.
 - **Inline ManualPool typeahead.** ManualPool's typeahead chip input is authored against a pace-core2 enhancement (Decision 3). Until the primitive ships, ManualPool's runtime behaviour is build-gated. The exact symbol name is to-be-determined as part of the pace-core2 PR (Decision 4 — see §17). Today's `<MultiSelect>` is static-options only and cannot serve the debounced live `core_member` query the slice needs. There is no cross-slice picker hand-off in v1 — PUMP has no directory slice. §16 records the future-migration option when a PUMP directory slice arrives.
-- **Client-uuid `pump_message.id` upsert.** PUMP-05 generates a client-side UUID at composer mount (`crypto.randomUUID()`) for the draft's `pump_message.id`. The Save Draft handler upserts using this id as the conflict key, ensuring multiple Save Draft clicks within a session update the same row rather than inserting duplicates. Verified: dev-db RLS policy `rbac_insert_pump_message` does not reference `id` in its WITH CHECK predicate (per platform-snapshot-2026-05-07 RLS summary), so explicit-id INSERT is permitted under the standard `create:page.CommsLog` gate.
+- **Client-uuid `pump_message.id` upsert.** PUMP-05 generates a client-side UUID at composer mount (`crypto.randomUUID()`) for the draft's `pump_message.id`. The Save Draft handler upserts using this id as the conflict key, ensuring multiple Save Draft clicks within a session update the same row rather than inserting duplicates. Verified: dev-db RLS policy `rbac_insert_pump_message` does not reference `id` in its WITH CHECK predicate (per platform-snapshot-2026-05-07 RLS summary), so explicit-id INSERT is permitted under the standard `create:page.comms-log` gate.
 - **`recipient_pool_descriptor` JSONB nullable.** Dev-db has the column nullable (drift from architecture's NOT NULL claim). Save-draft upserts may insert with `recipient_pool_descriptor = null` when the operator has not yet chosen a pool. Author against the live nullable shape.
 - **`useCommRbacContext` is app-local.** PUMP-01 publishes the provider and the hook (see PUMP-01 §7 cross-slice handoffs). pace-core2 publishes only the `CommRbacContext` type. Do not import the hook from `@solvera/pace-core/comms`.
 - **No Tooltip primitive.** pace-core2 has no `<Tooltip>`. The sender-identity banner's helper text uses inline help copy instead. Apply the same rule for any other surface help in the slice.
@@ -603,24 +603,24 @@ All six PUMP Edge functions deploy together before PUMP-05 build merges (per pla
 
 | Route | `pageName` | `operation` | Mounter | Fallback |
 |---|---|---|---|---|
-| `/comms/create` | `CommsLog` | `create` | PUMP-01 | PUMP-01's `<AccessDenied>` |
+| `/comms/create` | `comms-log` | `create` | PUMP-01 | PUMP-01's `<AccessDenied>` |
 
 ### Action-level access (PUMP-05A + PUMP-05B)
 
 | Action | Permission | Resolver | UI behaviour when denied |
 |---|---|---|---|
-| Render compose surface | `read:page.CommsLog` (transitively required by `create`) | PUMP-01 page guard | `<AccessDenied />` (PUMP-01) |
-| Compose / edit draft | `create:page.CommsLog` | `useCommRbacContext()` → `canCompose` | Composer renders read-only banner; Save draft / Send / Schedule / Send test all hidden or in read-only Alert |
-| Save draft | `create:page.CommsLog` (INSERT) AND draft-author for UPDATE OR `update:page.CommsLog` for non-author UPDATE | RLS policies on `pump_message`; UI check via `canCompose` | Save draft button rendered by composer (post-pace-core2 enhancement); composer-internal rules govern its enable / disable state. RLS at the database boundary is the security gate |
-| Send now | `update:page.CommsLog` | `useCommRbacContext()` → `canSend` | Composer footer shows read-only Alert; no Send / Schedule / Send test |
-| Schedule | `update:page.CommsLog` | `useCommRbacContext()` → `canSchedule` | Same |
-| Send test | `update:page.CommsLog` | `useCommRbacContext()` → `canSend` | Same |
+| Render compose surface | `read:page.comms-log` (transitively required by `create`) | PUMP-01 page guard | `<AccessDenied />` (PUMP-01) |
+| Compose / edit draft | `create:page.comms-log` | `useCommRbacContext()` → `canCompose` | Composer renders read-only banner; Save draft / Send / Schedule / Send test all hidden or in read-only Alert |
+| Save draft | `create:page.comms-log` (INSERT) AND draft-author for UPDATE OR `update:page.comms-log` for non-author UPDATE | RLS policies on `pump_message`; UI check via `canCompose` | Save draft button rendered by composer (post-pace-core2 enhancement); composer-internal rules govern its enable / disable state. RLS at the database boundary is the security gate |
+| Send now | `update:page.comms-log` | `useCommRbacContext()` → `canSend` | Composer footer shows read-only Alert; no Send / Schedule / Send test |
+| Schedule | `update:page.comms-log` | `useCommRbacContext()` → `canSchedule` | Same |
+| Send test | `update:page.comms-log` | `useCommRbacContext()` → `canSend` | Same |
 
 ### Server-side enforcement
 
-- **`pump_message` RLS** enforces draft visibility split (`rbac_select_nondraft_pump_message` for non-drafts, `rbac_select_own_drafts_pump_message` for own drafts), insert (`rbac_insert_pump_message` requires `create:page.CommsLog`), update (draft owner OR `update:page.CommsLog`), delete (`delete:page.CommsLog`).
+- **`pump_message` RLS** enforces draft visibility split (`rbac_select_nondraft_pump_message` for non-drafts, `rbac_select_own_drafts_pump_message` for own drafts), insert (`rbac_insert_pump_message` requires `create:page.comms-log`), update (draft owner OR `update:page.comms-log`), delete (`delete:page.comms-log`).
 - **`pump_message_recipient`** has no authenticated INSERT / UPDATE / DELETE; Edge writes via service role only.
-- **PUMP Edge functions** call `isPermitted` against `{operation}:page.CommsLog`, validate the `organisation_id` claim, validate `source_context_id` against caller scope, and re-run token validation. UI gating is UX only.
+- **PUMP Edge functions** call `isPermitted` against `{operation}:page.comms-log`, validate the `organisation_id` claim, validate `source_context_id` against caller scope, and re-run token validation. UI gating is UX only.
 - **`pump_get_effective_sender_identity`** runs STABLE SECURITY DEFINER; PUMP-03 BR-CallerAuthorisation defines the RPC's authorisation contract.
 
 ---
@@ -630,7 +630,7 @@ All six PUMP Edge functions deploy together before PUMP-05 build merges (per pla
 ### PUMP-05A — Route content + composer mount + recipient targeting + draft save
 
 **AC-A-01 — Page entry, authenticated, has org, has create permission.**
-Given a user is authenticated, has an org, and has `create:page.CommsLog`, when they navigate to `/comms/create`, then the page renders the heading "Compose", the breadcrumb "Comms log / Compose", the "Back to comms log" link with `<ChevronLeft>` icon, the sender-identity banner, the recipient-mode card with `'org_members'` selected, and the composer Card. (Traces A-01, A-02, A-03, A-26, A-27, A-28.)
+Given a user is authenticated, has an org, and has `create:page.comms-log`, when they navigate to `/comms/create`, then the page renders the heading "Compose", the breadcrumb "Comms log / Compose", the "Back to comms log" link with `<ChevronLeft>` icon, the sender-identity banner, the recipient-mode card with `'org_members'` selected, and the composer Card. (Traces A-01, A-02, A-03, A-26, A-27, A-28.)
 
 **AC-A-02 — Sender-identity resolution and banner.**
 Given the resolved organisation has `senderName: 'Org Comms'`, `fromAddress: 'comms@example.org'`, `senderPhone: null`, `resolvedFrom: 'organisation'`, and the active channel is email, when the page mounts, then the banner reads "Sending as Org Comms from comms@example.org · resolved from organisation" with the helper text "Sender identity is resolved automatically from your organisation's settings." (Traces A-04, A-05, A-26, BR-SenderIdentityResolution, BR-SenderIdentityDisplay.)
@@ -669,10 +669,10 @@ Given no draft fields have been edited, when the operator clicks "Cancel", then 
 Given the operator has typed body content but not saved, when they click "Cancel", then a `<Dialog>` titled "Discard unsaved changes?" renders with body "Any text you've entered will be lost.", a `variant="destructive"` "Discard" button, and a `variant="outline"` "Keep editing" button. Clicking "Discard" navigates to `/` without saving; clicking "Keep editing" closes the dialog and the operator remains on `/comms/create`. (Traces A-45, BR-CancelDestination.)
 
 **AC-A-14 — Permission denied — read.**
-Given a user is authenticated with org context but lacks `read:page.CommsLog`, when they navigate to `/comms/create`, then PUMP-01's `<AccessDenied>` renders inside the route shell and PUMP-05's page body does not render. (Traces A-20, A-46.)
+Given a user is authenticated with org context but lacks `read:page.comms-log`, when they navigate to `/comms/create`, then PUMP-01's `<AccessDenied>` renders inside the route shell and PUMP-05's page body does not render. (Traces A-20, A-46.)
 
 **AC-A-15 — Read-only mode (canSend false).**
-Given the user has `read:page.CommsLog` and `create:page.CommsLog` but lacks `update:page.CommsLog`, when they view `/comms/create`, then the composer renders the read-only banner and the CardFooter renders a single read-only `<Alert>` "You have view-only access to this message." in place of Send / Schedule / Send test. The composer's footer Save draft button is governed by composer-internal rules in the readOnlySend branch; PUMP-05 does not impose additional slice-level gating. Draft authorship remains gated by `create:page.CommsLog` and the per-row owner-update RLS at the database boundary. (Traces A-48.)
+Given the user has `read:page.comms-log` and `create:page.comms-log` but lacks `update:page.comms-log`, when they view `/comms/create`, then the composer renders the read-only banner and the CardFooter renders a single read-only `<Alert>` "You have view-only access to this message." in place of Send / Schedule / Send test. The composer's footer Save draft button is governed by composer-internal rules in the readOnlySend branch; PUMP-05 does not impose additional slice-level gating. Draft authorship remains gated by `create:page.comms-log` and the per-row owner-update RLS at the database boundary. (Traces A-48.)
 
 ### PUMP-05B — Send / Schedule / Send-test pipeline + result UX
 
@@ -729,7 +729,7 @@ Given the active recipient mode is `'manual'` with `member_ids: ['m1','m2']`, wh
 - **MCP test — `pump_message.recipient_pool_descriptor` is nullable.** Verify column metadata.
 - **MCP test — Manual-mode query.** Run `SELECT id FROM core_member m INNER JOIN core_person p ON … WHERE m.organisation_id = :orgId LIMIT 5` and confirm at least one row for the demo org.
 - **MCP test — Membership types and units.** Confirm `core_membership_type` and `core_unit` return rows for the demo org.
-- **In-app demo — page entry and identity banner.** Sign in as a PUMP org-admin with `create:page.CommsLog`. Visit `/comms/create`. Confirm the heading "Compose", subtitle, breadcrumb, back link, sender-identity banner, recipient-mode card with default `'org_members'`, and composer.
+- **In-app demo — page entry and identity banner.** Sign in as a PUMP org-admin with `create:page.comms-log`. Visit `/comms/create`. Confirm the heading "Compose", subtitle, breadcrumb, back link, sender-identity banner, recipient-mode card with default `'org_members'`, and composer.
 - **In-app demo — recipient-mode swap.** Switch to "Event participants" → confirm the Event single-select renders. Pick an event → confirm filter chips render. Switch to "Manual" → confirm the inline multi-select renders.
 - **In-app demo — Save draft.** Type a body with channel email and sender_name pre-filled. Click "Save draft". Confirm the success toast and that a row exists in `pump_message` with `status='draft'`. Click "Save draft" again with new content; confirm the same row updates (no second row created).
 - **In-app demo — Cancel dirty.** Type body content. Click "Cancel". Confirm the discard dialog opens. Click "Keep editing" → operator remains on `/comms/create`. Click "Discard" → navigates to `/`.
@@ -794,7 +794,7 @@ Given the active recipient mode is `'manual'` with `member_ids: ['m1','m2']`, wh
   - **(d)** pace-core2 `<CommComposer>` Save Draft button enhancement (footer button calling `adapter.saveDraft(draft)`) is published, per the consolidated PR proposal in §17. Without this enhancement, the composer footer renders no Save Draft button and the slice's `saveDraft` adapter override is unreachable.
   - **(e)** pace-core2 typeahead / Combobox primitive (or `<MultiSelect>` async-loadOptions enhancement) is published, per the consolidated PR proposal in §17. Without this primitive, ManualPool's runtime behaviour cannot be wired against `core_member`.
   The v6 slice does not author the Edge function bodies or the pace-core2 enhancements. Until items (a), (b), (c), (d), and (e) are confirmed via Supabase MCP and pace-core2 import-resolution checks, this slice cannot be marked Done.
-- **PUMP org-admin role-template seeding.** Confirm the PUMP org-admin role template includes `read:page.CommsLog`, `create:page.CommsLog`, and `update:page.CommsLog` grants on dev. Without these grants, the page guard or `useCommRbacContext` denies and operators see `<AccessDenied />` or the read-only state.
+- **PUMP org-admin role-template seeding.** Confirm the PUMP org-admin role template includes `read:page.comms-log`, `create:page.comms-log`, and `update:page.comms-log` grants on dev. Without these grants, the page guard or `useCommRbacContext` denies and operators see `<AccessDenied />` or the read-only state.
 - **gateway_message_id handoff.** Inspect `pump_message_recipient` after a successful PUMP-05B send and confirm `gateway_message_id` is populated by `pump-send` Edge — the contract handoff PUMP-06A relies on.
 - **Send / schedule / send-test invariants verified.** Inspect a successful adapter call request body and confirm `source_app === 'pump'`, `bypass_suppression` omitted, source-context per BR-SourceContextDerivation.
 
@@ -818,7 +818,7 @@ Given the active recipient mode is `'manual'` with `member_ids: ['m1','m2']`, wh
 - Do not mount a separate slice-level Save Draft button. The composer footer's Save Draft button (post-pace-core2 enhancement) is the only Save Draft entry point; PUMP-05's adapter override implements the persistence.
 - Do not use the standard `useCommSendAdapter()` output unwrapped. PUMP-05 must wrap it with a custom `CommSendAdapter` that overrides `saveDraft` only. Sibling apps (TEAM, BASE, future consumers) MUST NOT copy this wrapper — their composer slices use the hook output directly without wrapping, leaving drafts ephemeral.
 - Do not mount `<Toaster />` or `<ToastProvider>` from this slice. PUMP-01 mounts the provider.
-- Do not re-mount `<PagePermissionGuard>` for `/comms/create`. PUMP-01 mounts it with `pageName="CommsLog" operation="create"`.
+- Do not re-mount `<PagePermissionGuard>` for `/comms/create`. PUMP-01 mounts it with `pageName="comms-log" operation="create"`.
 - Do not use `<Tooltip>` primitives — pace-core2 has none. Use inline help text or `aria-label`.
 - Do not adopt the cross-slice picker hand-off pattern (TEAM-02 ↔ TEAM-13 sessionStorage doctrine) for ManualPool in v1. Manual mode is implemented inline in the composer because PUMP has no directory slice today. When a future PUMP directory slice arrives, manual mode may switch to the cross-slice handoff.
 - Do not navigate away on send / schedule success. The operator stays on `/comms/create`; the slice performs a light reset (preserving channel + resolved sender identity).
@@ -831,7 +831,7 @@ Given the active recipient mode is `'manual'` with `member_ids: ['m1','m2']`, wh
 - [`pump-architecture.md`](./pump-architecture.md) — Suite communications architecture, RBAC model, Effective sender identity contract, Slice sizing (PUMP-05 split A/B), High-risk slices, Information architecture — home, Routes owned.
 - [`pump-feature-list.md`](./pump-feature-list.md) — derived feature inventory (traceability).
 - [`pump-user-stories.md`](./pump-user-stories.md) — derived user stories (traceability).
-- **PUMP-01** — provides the `/comms/create` route mount, `<PagePermissionGuard pageName="CommsLog" operation="create">`, the app-local `<CommRbacContextProvider>` (publishing `useCommRbacContext()`; PUMP-01 §7 carries the published hook signature), the `<ToastProvider>`, and the application chrome (`<PaceAppLayout>`, header, navigation menu). PUMP-05 owns the page-level content rendered inside the layout's main content area — including the page heading, subtitle, breadcrumb row, and "Back to comms log" link. PUMP-05 consumes the route mount, page guard, RBAC provider, and toast provider from PUMP-01.
+- **PUMP-01** — provides the `/comms/create` route mount, `<PagePermissionGuard pageName="comms-log" operation="create">`, the app-local `<CommRbacContextProvider>` (publishing `useCommRbacContext()`; PUMP-01 §7 carries the published hook signature), the `<ToastProvider>`, and the application chrome (`<PaceAppLayout>`, header, navigation menu). PUMP-05 owns the page-level content rendered inside the layout's main content area — including the page heading, subtitle, breadcrumb row, and "Back to comms log" link. PUMP-05 consumes the route mount, page guard, RBAC provider, and toast provider from PUMP-01.
 - **PUMP-02** — owns the comms log at `/`. PUMP-05's "Back to comms log" link, breadcrumb `Comms log` link, post-action light reset, and Cancel destination point to `/`. Save-draft writes a row visible in PUMP-02's draft view (per the `pump_message` draft-visibility RLS split — only the draft author sees their own drafts in the log).
 - **PUMP-02B** — owns scheduled-message cancel and draft DELETE.
 - **PUMP-03** — owns the `pump_get_effective_sender_identity(...)` RPC contract (PUMP-05 calls it).
@@ -847,7 +847,7 @@ Given the active recipient mode is `'manual'` with `member_ids: ['m1','m2']`, wh
 - **Platform prerequisite — PUMP Edge deployment.** All six Edge functions (`pump-resolve-pool`, `pump-send`, `pump-schedule`, `pump-send-test`, `pump-load-templates`, `pump-load-merge-fields`) must be deployed on dev before PUMP-05 can be marked Done. Currently absent on dev (per platform-snapshot-2026-05-07). Listed in §15.
 - **Platform prerequisite — `pump_gateway_config` seeding.** At least one row per channel must exist on dev for `pump-send` to dispatch.
 - **Demo prerequisite — `pump_organisation_templates` seeding.** At least one fixture row per org per channel is needed for the templates section to render.
-- **Platform prerequisite — PUMP org-admin role-template seeding.** Confirm the PUMP org-admin role template includes the three CommsLog grants.
+- **Platform prerequisite — PUMP org-admin role-template seeding.** Confirm the PUMP org-admin role template includes the three comms-log grants.
 - **Platform team — consolidated pace-core2 PR proposal (PUMP-05 build prerequisite).** Propose a pace-core2 PR consolidating compose-related enhancements relevant to all comms apps (PUMP, TEAM, BASE, future):
   1. **`<CommComposer>` Save Draft button** in the footer, calling `adapter.saveDraft(draft)`. Default `saveDraft` (in-memory pass-through) handles ephemeral drafts for sibling apps with no work; apps that persist (PUMP-05) override `saveDraft` via a custom adapter wrapping the `useCommSendAdapter()` output.
   2. **Typeahead / Combobox primitive** for inline picker surfaces (PUMP-05 ManualPool; potentially other surfaces). Either a new component or a `<MultiSelect>` async-loadOptions enhancement that accepts a debounced async `loadOptions(query)` callback. The exact symbol resolves as part of the PR.

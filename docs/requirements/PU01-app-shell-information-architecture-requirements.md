@@ -104,9 +104,9 @@ ErrorBoundaryProvider                                  // outermost — catches 
 
 **`<CommRbacContextProvider>` derivation contract.** The provider derives `{ canCompose, canSend, canSchedule }` once per session inside the authenticated shell, where the RBAC engine and organisation context are fully resolved. Mapping:
 
-- `canCompose` ← `create:page.CommsLog`
-- `canSend` ← `update:page.CommsLog`
-- `canSchedule` ← `update:page.CommsLog`
+- `canCompose` ← `create:page.comms-log`
+- `canSend` ← `update:page.comms-log`
+- `canSchedule` ← `update:page.comms-log`
 
 Downstream PUMP-05 reads the values via `useCommRbacContext()`. Downstream slices do not re-derive these booleans from raw `useCan(...)` calls. If `@solvera/pace-core/comms` has not yet published the provider component at PUMP-01 build time, PUMP-01 implements the provider inline against `useCan(permission, scope)` from `@solvera/pace-core/rbac`, exposing the same `CommRbacContext` type from `@solvera/pace-core/comms` and the same `useCommRbacContext()` hook signature so the downstream consumption pattern is unchanged when pace-core2 promotes the provider.
 
@@ -117,9 +117,9 @@ Downstream PUMP-05 reads the values via `useCommRbacContext()`. Downstream slice
 | Route | Wrapper | Content owner |
 |---|---|---|
 | `/login` | (none — outside `<ProtectedRoute>`, `<SessionRestorationLoader>`, and `<AuthenticatedShell>`) | PUMP-01 (renders `<PaceLoginPage appName="PUMP">`) |
-| `/` | `<ProtectedRoute>` → `<SessionRestorationLoader>` → `<AuthenticatedShell>` (layout route) → `<PagePermissionGuard pageName="CommsLog" operation="read">` | PUMP-02 replaces placeholder |
-| `/comms/create` | `<ProtectedRoute>` → `<SessionRestorationLoader>` → `<AuthenticatedShell>` → `<PagePermissionGuard pageName="CommsLog" operation="create">` | PUMP-05 replaces placeholder |
-| `/comms/templates` | `<ProtectedRoute>` → `<SessionRestorationLoader>` → `<AuthenticatedShell>` → `<PagePermissionGuard pageName="CommsTemplates" operation="read">` | PUMP-04 replaces placeholder |
+| `/` | `<ProtectedRoute>` → `<SessionRestorationLoader>` → `<AuthenticatedShell>` (layout route) → `<PagePermissionGuard pageName="comms-log" operation="read">` | PUMP-02 replaces placeholder |
+| `/comms/create` | `<ProtectedRoute>` → `<SessionRestorationLoader>` → `<AuthenticatedShell>` → `<PagePermissionGuard pageName="comms-log" operation="create">` | PUMP-05 replaces placeholder |
+| `/comms/templates` | `<ProtectedRoute>` → `<SessionRestorationLoader>` → `<AuthenticatedShell>` → `<PagePermissionGuard pageName="comms-templates" operation="read">` | PUMP-04 replaces placeholder |
 | `*` | `<ProtectedRoute>` → `<SessionRestorationLoader>` → `<AuthenticatedShell>` | PUMP-01 (renders NotFound) |
 
 The paths `/comms` and `/comms/settings` are **not registered** anywhere in the router. Authenticated users hitting either fall through to `*` NotFound. There is no redirect.
@@ -172,19 +172,19 @@ The catch-all `*` route follows the same chain through step 4 (it lives inside `
 
 - Requires authentication (step 2).
 - Requires organisation context (no-organisation check at step 4 fires before the page guard).
-- Requires `read:page.CommsLog` (page guard at step 5).
+- Requires `read:page.comms-log` (page guard at step 5).
 - PUMP-01 renders a placeholder block inside the guard. The placeholder is a centred message: "Communications log — coming in PUMP-02." There is no feature query, no list, no action button.
 - PUMP-02 replaces the placeholder content; the route registration and guard mount stay with PUMP-01.
 
 **Compose route slot (`/comms/create`).**
 
-- Requires authentication, organisation context, and `create:page.CommsLog`.
+- Requires authentication, organisation context, and `create:page.comms-log`.
 - PUMP-01 renders a placeholder block: "Compose — coming in PUMP-05." No feature query.
 - PUMP-05 replaces the placeholder content.
 
 **Templates route slot (`/comms/templates`).**
 
-- Requires authentication, organisation context, and `read:page.CommsTemplates`.
+- Requires authentication, organisation context, and `read:page.comms-templates`.
 - PUMP-01 renders a placeholder block: "Templates — coming in PUMP-04." No feature query.
 - PUMP-04 replaces the placeholder content.
 
@@ -245,9 +245,9 @@ The catch-all `*` route follows the same chain through step 4 (it lives inside `
 
 - **Sign in (login form).** Submit button on `/login`. On submit, `<PaceLoginPage>` calls Supabase auth. On success: redirect to `/`. On failure: inline error alert; form remains interactive.
 - **Navigation menu trigger (header).** Opens the navigation dropdown panel. Renders the three nav items in this order:
-  1. **Comms log** — `href="/"`, icon `Mail`, gated `read:page.CommsLog`.
-  2. **Compose** — `href="/comms/create"`, icon `MessageSquare`, gated `create:page.CommsLog`.
-  3. **Templates** — `href="/comms/templates"`, icon `FileText`, gated `read:page.CommsTemplates`.
+  1. **Comms log** — `href="/"`, icon `Mail`, gated `read:page.comms-log`.
+  2. **Compose** — `href="/comms/create"`, icon `MessageSquare`, gated `create:page.comms-log`.
+  3. **Templates** — `href="/comms/templates"`, icon `FileText`, gated `read:page.comms-templates`.
 - **Nav item click.** Navigates to the item's `href`. The dropdown closes. Items the user lacks permission for are not rendered (see Permission-conditional rendering below).
 - **Organisation context selector.** Renders the user's organisation memberships and allows switching context. Supplied by `<PaceAppLayout showOrganisations={true}>`.
 - **User menu — Sign out.** Calls `signOut()` from `useUnifiedAuth()`, then `navigate('/login', { replace: true })`. The Supabase session is cleared. No toast.
@@ -269,12 +269,12 @@ N/A — no filters, sorts, search, pagination, exports, or keyboard shortcuts ow
 | Not authenticated, navigating to any `/login`-distinct path | Not shown — redirect to `/login` | n/a | n/a |
 | Authenticated, no organisation | Shown (header + footer) | All nav items hidden (no organisation in scope, page-grant evaluations have no scope) | No-organisation empty state |
 | Authenticated, has organisation, missing all PUMP page grants | Shown | None visible (each `<NavigationGuard>` hides its item) | `<AccessDenied />` on whichever route the user navigates to |
-| Authenticated, has `read:page.CommsLog` only | Shown | Comms log only | `/`: placeholder; `/comms/create`: `<AccessDenied />`; `/comms/templates`: `<AccessDenied />` |
-| Authenticated, has `read:page.CommsLog` + `read:page.CommsTemplates` | Shown | Comms log + Templates | `/comms/templates`: placeholder; `/comms/create`: `<AccessDenied />` |
-| Authenticated, has `read:page.CommsLog` + `create:page.CommsLog` | Shown | Comms log + Compose | `/comms/create`: placeholder; `/comms/templates`: `<AccessDenied />` |
+| Authenticated, has `read:page.comms-log` only | Shown | Comms log only | `/`: placeholder; `/comms/create`: `<AccessDenied />`; `/comms/templates`: `<AccessDenied />` |
+| Authenticated, has `read:page.comms-log` + `read:page.comms-templates` | Shown | Comms log + Templates | `/comms/templates`: placeholder; `/comms/create`: `<AccessDenied />` |
+| Authenticated, has `read:page.comms-log` + `create:page.comms-log` | Shown | Comms log + Compose | `/comms/create`: placeholder; `/comms/templates`: `<AccessDenied />` |
 | Authenticated, has all three grants | Shown | All three nav items | All route slots render their placeholder (or owner-slice content once landed) |
 
-Behaviour is identical for `update:page.CommsLog` only inside `<CommRbacContextProvider>`'s derivation: it sets `canSend` and `canSchedule` to `true` for downstream PUMP-05 consumption. `update:page.CommsLog` does not gate any nav item or route in PUMP-01.
+Behaviour is identical for `update:page.comms-log` only inside `<CommRbacContextProvider>`'s derivation: it sets `canSend` and `canSchedule` to `true` for downstream PUMP-05 consumption. `update:page.comms-log` does not gate any nav item or route in PUMP-01.
 
 ### Navigation
 
@@ -368,9 +368,9 @@ const navItems: NavigationItem[] = [
 
 **`<NavigationGuard>` wrappers (each nav item).** Each `<NavigationItem>` rendered inside the dropdown is wrapped in `<NavigationGuard permission="...">` so the link is hidden when permission is denied:
 
-- Comms log: `<NavigationGuard permission="read:page.CommsLog">` — hides if user lacks the grant.
-- Compose: `<NavigationGuard permission="create:page.CommsLog">` — hides if user lacks the grant.
-- Templates: `<NavigationGuard permission="read:page.CommsTemplates">` — hides if user lacks the grant.
+- Comms log: `<NavigationGuard permission="read:page.comms-log">` — hides if user lacks the grant.
+- Compose: `<NavigationGuard permission="create:page.comms-log">` — hides if user lacks the grant.
+- Templates: `<NavigationGuard permission="read:page.comms-templates">` — hides if user lacks the grant.
 
 `hideWhenDenied` defaults to `true`, which is the desired behaviour. No `disableWhenDenied` is set.
 
@@ -393,9 +393,9 @@ const navItems: NavigationItem[] = [
 
 - Mounted by `<AuthenticatedShell>` inside the normal `<PaceAppLayout>` branch (around `<Outlet />`). Not mounted on the loading or no-organisation branches.
 - Derives `{ canCompose: boolean, canSend: boolean, canSchedule: boolean }` from page grants once per session and re-derives when the active organisation changes:
-  - `canCompose ← create:page.CommsLog`
-  - `canSend ← update:page.CommsLog`
-  - `canSchedule ← update:page.CommsLog`
+  - `canCompose ← create:page.comms-log`
+  - `canSend ← update:page.comms-log`
+  - `canSchedule ← update:page.comms-log`
 - Exposes the value through `useCommRbacContext()` for descendant slices (PUMP-05).
 - If pace-core2 has not yet published the provider component at PUMP-01 build time, PUMP-01 implements the provider inline using `useCan(permission, scope)` from `@solvera/pace-core/rbac`, exposing the same `CommRbacContext` type from `@solvera/pace-core/comms` and the same `useCommRbacContext()` hook signature.
 
@@ -472,12 +472,12 @@ const navItems: NavigationItem[] = [
 |---|---|---|---|
 | Not authenticated | Not shown — redirect to `/login` | n/a | n/a |
 | Authenticated, no organisation | Shown | All three nav items hidden | No-organisation message |
-| Authenticated, has organisation, lacks `read:page.CommsLog` | Shown | Comms log hidden | `/`: `<AccessDenied />` |
-| Authenticated, has organisation, lacks `create:page.CommsLog` | Shown | Compose hidden | `/comms/create`: `<AccessDenied />` |
-| Authenticated, has organisation, lacks `read:page.CommsTemplates` | Shown | Templates hidden | `/comms/templates`: `<AccessDenied />` |
+| Authenticated, has organisation, lacks `read:page.comms-log` | Shown | Comms log hidden | `/`: `<AccessDenied />` |
+| Authenticated, has organisation, lacks `create:page.comms-log` | Shown | Compose hidden | `/comms/create`: `<AccessDenied />` |
+| Authenticated, has organisation, lacks `read:page.comms-templates` | Shown | Templates hidden | `/comms/templates`: `<AccessDenied />` |
 | Authenticated with all three grants | Shown | All three nav items visible | All route slots render their placeholder (or owner-slice content once landed) |
 
-`update:page.CommsLog` does not gate any nav item or route in PUMP-01; it influences only the `canSend` / `canSchedule` booleans inside `<CommRbacContextProvider>`.
+`update:page.comms-log` does not gate any nav item or route in PUMP-01; it influences only the `canSend` / `canSchedule` booleans inside `<CommRbacContextProvider>`.
 
 ---
 
@@ -537,17 +537,17 @@ const navItems: NavigationItem[] = [
 
 **BR-Z2 — Nav permission gating.** Each `<NavigationItem>` inside the NavigationMenu dropdown is wrapped in `<NavigationGuard permission="...">` with `hideWhenDenied=true` (the default). Permissions:
 
-- Comms log → `read:page.CommsLog`
-- Compose → `create:page.CommsLog`
-- Templates → `read:page.CommsTemplates`
+- Comms log → `read:page.comms-log`
+- Compose → `create:page.comms-log`
+- Templates → `read:page.comms-templates`
 
 `<NavigationGuard>` evaluates the permission against the current organisation scope (resolved internally). `<NavigationGuard>` is independent of `<PagePermissionGuard>` — it controls whether the link is visible; the route-level guard still fires when a user navigates by URL.
 
 **BR-AA — `<CommRbacContextProvider>` derivation.** `<CommRbacContextProvider>` is mounted by `<AuthenticatedShell>` inside the normal `<PaceAppLayout>` branch (around `<Outlet />`). Not mounted on the loading or no-organisation branches. The provider derives the `CommRbacContext` once per active organisation:
 
-- `canCompose ← create:page.CommsLog`
-- `canSend ← update:page.CommsLog`
-- `canSchedule ← update:page.CommsLog`
+- `canCompose ← create:page.comms-log`
+- `canSend ← update:page.comms-log`
+- `canSchedule ← update:page.comms-log`
 
 Re-derivation occurs when the active organisation changes (organisation context selector). Downstream slices consume via `useCommRbacContext()`. If pace-core2 has not yet published `<CommRbacContextProvider>` and `useCommRbacContext` from `@solvera/pace-core/comms` at PUMP-01 build time, PUMP-01 implements the provider inline against `useCan(permission, scope)` from `@solvera/pace-core/rbac`, exposing the same `CommRbacContext` type from `@solvera/pace-core/comms` and the same hook signature.
 
@@ -571,7 +571,7 @@ PUMP-01 itself does not read PUMP-domain tables. All reads are internal to pace-
 
 - `<OrganisationServiceProvider>` reads organisation membership data to resolve `selectedOrganisation`. No slice-level query.
 - `<PagePermissionGuard>` and `<NavigationGuard>` read RBAC tables via the RBAC engine (`check_rbac_permission_with_context(...)` + `get_app_id('PUMP')`). No slice-level query.
-- `<CommRbacContextProvider>` invokes `useCan(permission, scope)` (or its inline equivalent) to resolve `create:page.CommsLog` and `update:page.CommsLog`. No slice-level query.
+- `<CommRbacContextProvider>` invokes `useCan(permission, scope)` (or its inline equivalent) to resolve `create:page.comms-log` and `update:page.comms-log`. No slice-level query.
 
 ### Write contracts
 
@@ -584,17 +584,17 @@ There are no PUMP-domain DB writes from PUMP-01.
 
 ### RLS / permission contracts
 
-- `/` requires `read:page.CommsLog`.
-- `/comms/create` requires `create:page.CommsLog`.
-- `/comms/templates` requires `read:page.CommsTemplates`.
-- Send / schedule / test-send actions on `/comms/create` require `update:page.CommsLog`. PUMP-01 surfaces the booleans via `<CommRbacContextProvider>` for PUMP-05; the route-level guard for `/comms/create` does **not** require `update`.
+- `/` requires `read:page.comms-log`.
+- `/comms/create` requires `create:page.comms-log`.
+- `/comms/templates` requires `read:page.comms-templates`.
+- Send / schedule / test-send actions on `/comms/create` require `update:page.comms-log`. PUMP-01 surfaces the booleans via `<CommRbacContextProvider>` for PUMP-05; the route-level guard for `/comms/create` does **not** require `update`.
 - All RBAC checks resolve scope from `<OrganisationServiceProvider>` context — no `scope` prop is passed to `<PagePermissionGuard>`.
 
 ### Cross-slice handoffs
 
-- **PUMP-02 ↔ PUMP-01.** PUMP-02 replaces PUMP-01's placeholder content at `/`. The route registration and `<PagePermissionGuard pageName="CommsLog" operation="read">` mount stay with PUMP-01. PUMP-02 does not re-mount the guard.
-- **PUMP-04 ↔ PUMP-01.** PUMP-04 replaces PUMP-01's placeholder content at `/comms/templates`. The route registration and `<PagePermissionGuard pageName="CommsTemplates" operation="read">` mount stay with PUMP-01.
-- **PUMP-05 ↔ PUMP-01.** PUMP-05 replaces PUMP-01's placeholder content at `/comms/create`. The route registration and `<PagePermissionGuard pageName="CommsLog" operation="create">` mount stay with PUMP-01. PUMP-05 also consumes `CommRbacContext` via `useCommRbacContext()` from inside the chrome.
+- **PUMP-02 ↔ PUMP-01.** PUMP-02 replaces PUMP-01's placeholder content at `/`. The route registration and `<PagePermissionGuard pageName="comms-log" operation="read">` mount stay with PUMP-01. PUMP-02 does not re-mount the guard.
+- **PUMP-04 ↔ PUMP-01.** PUMP-04 replaces PUMP-01's placeholder content at `/comms/templates`. The route registration and `<PagePermissionGuard pageName="comms-templates" operation="read">` mount stay with PUMP-01.
+- **PUMP-05 ↔ PUMP-01.** PUMP-05 replaces PUMP-01's placeholder content at `/comms/create`. The route registration and `<PagePermissionGuard pageName="comms-log" operation="create">` mount stay with PUMP-01. PUMP-05 also consumes `CommRbacContext` via `useCommRbacContext()` from inside the chrome.
 - PUMP-01 does not hand off to PUMP-06 (Edge / webhook ingestion is out of UI scope).
 
 ### ID contracts
@@ -624,8 +624,8 @@ PUMP-01 makes no PUMP-domain table reads or writes.
 ### Dev-db verification (project: `rkytnffgmwnnmewevqgp`)
 
 1. Confirm `rbac_apps` row: `name = 'PUMP'`, `is_active = true`.
-2. Confirm `rbac_app_pages` rows exist for `(app = 'PUMP', page_name IN ('CommsLog', 'CommsTemplates'))`.
-3. Note (informational): `CreateComms` and `CommsSettings` rows persist on dev-db but PUMP-01 does **not** consume them. Cleanup is platform-team work, not a PUMP-01 build action.
+2. Confirm `rbac_app_pages` rows exist for `(app = 'PUMP', page_name IN ('comms-log', 'comms-templates'))`.
+3. Note (informational): `CreateComms` (legacy) rows may persist on dev-db; `comms-settings` is catalogue-only with **no v1 route**. PUMP-01 does **not** consume either for routing. Cleanup is platform-team work, not a PUMP-01 build action.
 
 ### Domain references
 
@@ -689,7 +689,7 @@ PUMP-01 makes no PUMP-domain table reads or writes.
 
 **`<CommRbacContextProvider>` placement.** `<CommRbacContextProvider>` is mounted inside the normal `<PaceAppLayout>` branch only — descendants of the loading branch or no-organisation branch cannot call `useCommRbacContext()`. PUMP-05 mounts inside the chrome via the `<Outlet />`, so this is the correct scope.
 
-**`<CommRbacContextProvider>` resolution path.** Verify the export at PUMP-01 authoring/build time. If `@solvera/pace-core/comms` publishes `<CommRbacContextProvider>` and `useCommRbacContext`, import them. If pace-core2 has not yet published the provider, implement it inline in `src/components/comms/CommRbacContextProvider.tsx`: derive `canCompose` from `useCan('create:page.CommsLog', { organisationId })`, `canSend` and `canSchedule` from `useCan('update:page.CommsLog', { organisationId })`, expose the value as `CommRbacContext` (type imported from `@solvera/pace-core/comms`), and publish a local `useCommRbacContext()` hook with the same signature so PUMP-05's import surface does not change when pace-core2 promotes the provider.
+**`<CommRbacContextProvider>` resolution path.** Verify the export at PUMP-01 authoring/build time. If `@solvera/pace-core/comms` publishes `<CommRbacContextProvider>` and `useCommRbacContext`, import them. If pace-core2 has not yet published the provider, implement it inline in `src/components/comms/CommRbacContextProvider.tsx`: derive `canCompose` from `useCan('create:page.comms-log', { organisationId })`, `canSend` and `canSchedule` from `useCan('update:page.comms-log', { organisationId })`, expose the value as `CommRbacContext` (type imported from `@solvera/pace-core/comms`), and publish a local `useCommRbacContext()` hook with the same signature so PUMP-05's import surface does not change when pace-core2 promotes the provider.
 
 **`userFullName` derivation.** Read `user` from `useUnifiedAuth()`. `userFullName` is `user?.user_metadata?.full_name` if it is a non-empty string; otherwise `user?.email`; otherwise `'Authenticated user'`. Do not pass a raw user object to `<PaceAppLayout>`.
 
@@ -709,9 +709,9 @@ PUMP-01 makes no PUMP-domain table reads or writes.
 
 | Route | `pageName` | `operation` | Fallback |
 |---|---|---|---|
-| `/` | `CommsLog` | `read` | `<AccessDenied />` (default) |
-| `/comms/create` | `CommsLog` | `create` | `<AccessDenied />` (default) |
-| `/comms/templates` | `CommsTemplates` | `read` | `<AccessDenied />` (default) |
+| `/` | `comms-log` | `read` | `<AccessDenied />` (default) |
+| `/comms/create` | `comms-log` | `create` | `<AccessDenied />` (default) |
+| `/comms/templates` | `comms-templates` | `read` | `<AccessDenied />` (default) |
 
 `/login` and `*` are not gated by `<PagePermissionGuard>`. `/login` is fully unauthenticated. `*` (NotFound) is wrapped only by `<ProtectedRoute>` and renders inside `<AuthenticatedShell>`; any authenticated user can see NotFound.
 
@@ -719,9 +719,9 @@ PUMP-01 makes no PUMP-domain table reads or writes.
 
 | Nav item | Permission | Behaviour |
 |---|---|---|
-| Comms log | `read:page.CommsLog` | Hidden when denied |
-| Compose | `create:page.CommsLog` | Hidden when denied |
-| Templates | `read:page.CommsTemplates` | Hidden when denied |
+| Comms log | `read:page.comms-log` | Hidden when denied |
+| Compose | `create:page.comms-log` | Hidden when denied |
+| Templates | `read:page.comms-templates` | Hidden when denied |
 
 `<NavigationGuard>` `hideWhenDenied` defaults to `true`. No `disableWhenDenied` is set.
 
@@ -729,9 +729,9 @@ PUMP-01 makes no PUMP-domain table reads or writes.
 
 The provider derives:
 
-- `canCompose` from `create:page.CommsLog`.
-- `canSend` from `update:page.CommsLog`.
-- `canSchedule` from `update:page.CommsLog`.
+- `canCompose` from `create:page.comms-log`.
+- `canSend` from `update:page.comms-log`.
+- `canSchedule` from `update:page.comms-log`.
 
 These booleans are consumed downstream by PUMP-05 — they do not gate any PUMP-01 surface.
 
@@ -742,7 +742,7 @@ These booleans are consumed downstream by PUMP-05 — they do not gate any PUMP-
 - A user must be authenticated before any guard fires (`<ProtectedRoute>` fires first).
 - A user must have organisation context before any guard fires (no-organisation branch fires before the page guard; see §3 evaluation ordering).
 - Users denied a page grant see `<AccessDenied />` inside `<PaceMain>`; the chrome remains visible.
-- `update:page.CommsLog` is consumed only by `<CommRbacContextProvider>` (it influences `canSend` / `canSchedule`); it does not gate any nav item or route in PUMP-01.
+- `update:page.comms-log` is consumed only by `<CommRbacContextProvider>` (it influences `canSend` / `canSchedule`); it does not gate any nav item or route in PUMP-01.
 
 ---
 
@@ -758,13 +758,13 @@ These booleans are consumed downstream by PUMP-05 — they do not gate any PUMP-
 
 **AC-05 — No organisation assigned.** Given a user is authenticated but has no organisation membership, when they navigate to any authenticated route, then `<AuthenticatedShell>` renders the chrome and the message "No organisation assigned. Please contact your administrator." inside `<PaceMain>`. No feature content, no nav items, and no `<PagePermissionGuard>` evaluation occurs.
 
-**AC-06 — Permission denied on `/`.** Given a user is authenticated with an organisation but lacks `read:page.CommsLog`, when they navigate to `/`, then `<AccessDenied />` is rendered inside `<PaceMain>` and the header and footer remain visible.
+**AC-06 — Permission denied on `/`.** Given a user is authenticated with an organisation but lacks `read:page.comms-log`, when they navigate to `/`, then `<AccessDenied />` is rendered inside `<PaceMain>` and the header and footer remain visible.
 
-**AC-07 — Permission denied on `/comms/create`.** Given a user is authenticated with an organisation but lacks `create:page.CommsLog`, when they navigate to `/comms/create`, then `<AccessDenied />` is rendered inside `<PaceMain>`.
+**AC-07 — Permission denied on `/comms/create`.** Given a user is authenticated with an organisation but lacks `create:page.comms-log`, when they navigate to `/comms/create`, then `<AccessDenied />` is rendered inside `<PaceMain>`.
 
-**AC-08 — Permission denied on `/comms/templates`.** Given a user is authenticated with an organisation but lacks `read:page.CommsTemplates`, when they navigate to `/comms/templates`, then `<AccessDenied />` is rendered inside `<PaceMain>`.
+**AC-08 — Permission denied on `/comms/templates`.** Given a user is authenticated with an organisation but lacks `read:page.comms-templates`, when they navigate to `/comms/templates`, then `<AccessDenied />` is rendered inside `<PaceMain>`.
 
-**AC-09 — Nav item hidden when permission missing.** Given a user is authenticated with an organisation and lacks `read:page.CommsTemplates`, when they open the NavigationMenu dropdown, then the "Templates" item is not rendered, and only the items whose grants the user holds are visible.
+**AC-09 — Nav item hidden when permission missing.** Given a user is authenticated with an organisation and lacks `read:page.comms-templates`, when they open the NavigationMenu dropdown, then the "Templates" item is not rendered, and only the items whose grants the user holds are visible.
 
 **AC-10 — `/comms` is unrouted.** Given an authenticated user navigates to `/comms`, then the `*` catch-all renders the NotFound page inside the chrome with no redirect.
 
@@ -790,9 +790,9 @@ These booleans are consumed downstream by PUMP-05 — they do not gate any PUMP-
 
 **AC-21 — Toast available from any authenticated route.** Given a user is authenticated and inside `<AuthenticatedShell>`, when any descendant component calls `toast({ title, description, variant })` from `@solvera/pace-core/components`, then a notification renders as an overlay anchored to the bottom-right of the viewport without throwing a "must be called within a ToastProvider" error, and auto-dismisses after the configured `duration` (default 5000 ms).
 
-**AC-22 — `CommRbacContext` resolves for descendants.** Given a user is authenticated with an organisation and holds `create:page.CommsLog` and `update:page.CommsLog`, when a descendant of `<AuthenticatedShell>` calls `useCommRbacContext()`, then it returns `{ canCompose: true, canSend: true, canSchedule: true }` without throwing.
+**AC-22 — `CommRbacContext` resolves for descendants.** Given a user is authenticated with an organisation and holds `create:page.comms-log` and `update:page.comms-log`, when a descendant of `<AuthenticatedShell>` calls `useCommRbacContext()`, then it returns `{ canCompose: true, canSend: true, canSchedule: true }` without throwing.
 
-**AC-23 — `CommRbacContext` denies when grants are missing.** Given a user is authenticated with an organisation but lacks `create:page.CommsLog` and `update:page.CommsLog`, when a descendant of `<AuthenticatedShell>` calls `useCommRbacContext()`, then it returns `{ canCompose: false, canSend: false, canSchedule: false }`.
+**AC-23 — `CommRbacContext` denies when grants are missing.** Given a user is authenticated with an organisation but lacks `create:page.comms-log` and `update:page.comms-log`, when a descendant of `<AuthenticatedShell>` calls `useCommRbacContext()`, then it returns `{ canCompose: false, canSend: false, canSchedule: false }`.
 
 **AC-24 — `npm run validate` passes.** Given the PUMP-01 implementation is complete, when `npm run validate` runs, then it exits with code 0 with no TypeScript errors and no lint errors, and every `@solvera/pace-core` sub-path resolves.
 
@@ -818,8 +818,8 @@ These booleans are consumed downstream by PUMP-05 — they do not gate any PUMP-
 - Trigger inactivity by simulated idle and confirm `<InactivityWarningModal>` appears at the 28-minute mark.
 - Against dev-db (`rkytnffgmwnnmewevqgp`):
   - Confirm `rbac_apps` row `name = 'PUMP'`, `is_active = true`.
-  - Confirm `rbac_app_pages` rows for `(app = 'PUMP', page_name IN ('CommsLog', 'CommsTemplates'))`.
-  - Note: `CreateComms` and `CommsSettings` may also exist on dev-db; PUMP-01 does not consume them.
+  - Confirm `rbac_app_pages` rows for `(app = 'PUMP', page_name IN ('comms-log', 'comms-templates'))`.
+  - Note: Legacy `CreateComms` may exist on dev-db; `comms-settings` has no v1 route. PUMP-01 does not consume them for routing.
 
 ---
 
@@ -849,7 +849,7 @@ n/a — standard PDLC quality gates apply.
 - All 24 acceptance criteria (AC-01 through AC-24) verified.
 - `@solvera/pace-core` sub-path imports (`/`, `/components`, `/providers`, `/rbac`, `/hooks`, `/comms`) confirmed resolving in `npm run validate` output.
 - `<CommRbacContextProvider>` resolution path documented in the build queue: which path was taken (pace-core2 published or local inline implementation) and the date.
-- Post-build RBAC seeding reminder documented in the QA pack: confirm `rbac_apps('PUMP')` and `rbac_app_pages` rows for `CommsLog` and `CommsTemplates`.
+- Post-build RBAC seeding reminder documented in the QA pack: confirm `rbac_apps('PUMP')` and `rbac_app_pages` rows for `comms-log`, `comms-templates`, and `comms-settings` (catalogue only for settings — no v1 route).
 
 ---
 
@@ -881,8 +881,8 @@ n/a — standard PDLC quality gates apply.
 - [`../../product-delivery-lifecycle.md`](../../product-delivery-lifecycle.md) § "RBAC API usage contract" — guard prop conventions (no `scope` prop on `<PagePermissionGuard>`; `<NavigationGuard>` takes a single permission string; `useCan` takes a concatenated permission string).
 - [`../../AGENT-RULES.md`](../../AGENT-RULES.md) — generic agent contract.
 - Sibling slices:
-  - **PUMP-02** — replaces PUMP-01's `/` placeholder. Communications log content; consumes `read:page.CommsLog`.
-  - **PUMP-04** — replaces PUMP-01's `/comms/templates` placeholder. Templates CRUD; consumes `CommsTemplates` page grants.
+  - **PUMP-02** — replaces PUMP-01's `/` placeholder. Communications log content; consumes `read:page.comms-log`.
+  - **PUMP-04** — replaces PUMP-01's `/comms/templates` placeholder. Templates CRUD; consumes `comms-templates` page grants.
   - **PUMP-05** — replaces PUMP-01's `/comms/create` placeholder. Compose surface; consumes `CommRbacContext` from PUMP-01 via `useCommRbacContext()`.
   - **PUMP-06** — Edge / webhook ingestion; not consumed by PUMP-01.
 - **Outstanding gates / known gaps:**

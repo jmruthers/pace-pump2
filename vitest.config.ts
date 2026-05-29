@@ -3,14 +3,25 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
+import {
+  coverageConfig,
+  domInclude,
+  resolveAlias,
+  sharedTestOptions,
+  unitInclude,
+} from './vitest.shared.js';
 
 const env = loadEnv('test', process.cwd(), '');
+
+const domEnvironmentGlobs = domInclude.map(
+  (pattern) => [pattern, 'happy-dom'] as [string, string]
+);
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
-      '@': path.resolve(process.cwd(), 'src'),
+      ...resolveAlias,
       '@pump-webhook-logic': path.resolve(
         process.cwd(),
         '../pace-core2/packages/core/supabase/functions/_shared/pump-webhook-logic.ts'
@@ -26,19 +37,18 @@ export default defineConfig({
       PUMP_CONTRACT_TEST_EMAIL: env.PUMP_CONTRACT_TEST_EMAIL ?? '',
       PUMP_CONTRACT_TEST_PASSWORD: env.PUMP_CONTRACT_TEST_PASSWORD ?? '',
     },
-    environment: 'happy-dom',
+    ...sharedTestOptions,
     testTimeout: 10000,
     hookTimeout: 10000,
     teardownTimeout: 5000,
+    environment: 'node',
+    environmentMatchGlobs: domEnvironmentGlobs,
+    include: [...unitInclude, ...domInclude],
     coverage: {
       provider: 'istanbul',
       reporter: ['text'],
-      include: ['src/**/*.ts', 'src/**/*.tsx'],
-      exclude: [
-        'src/**/*.test.ts',
-        'src/**/*.test.tsx',
-        'src/**/index.ts',
-      ],
+      include: coverageConfig.include,
+      exclude: coverageConfig.exclude,
     },
   },
 });

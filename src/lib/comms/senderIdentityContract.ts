@@ -84,11 +84,11 @@ export function assertEffectivePumpSenderIdentityShape(
   if (typeof row.canSendEmail !== 'boolean' || typeof row.canSendSms !== 'boolean') {
     throw new Error('canSendEmail and canSendSms must be booleans');
   }
-  if (row.resolvedFrom === 'platform_default' && row.resolvedOrganisationId != null) {
-    throw new Error('resolvedOrganisationId must be null when resolvedFrom is platform_default');
+  if (row.resolvedFrom === 'unresolved' && row.resolvedOrganisationId != null) {
+    throw new Error('resolvedOrganisationId must be null when resolvedFrom is unresolved');
   }
-  if (row.resolvedFrom !== 'platform_default' && row.resolvedOrganisationId == null) {
-    throw new Error('resolvedOrganisationId must be set when resolvedFrom is not platform_default');
+  if (row.resolvedFrom !== 'unresolved' && row.resolvedOrganisationId == null) {
+    throw new Error('resolvedOrganisationId must be set when resolvedFrom is not unresolved');
   }
 
   const derived = deriveChannelReadiness(row);

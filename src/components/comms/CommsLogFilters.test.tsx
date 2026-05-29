@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import type { CommsLogSearchState } from '@/lib/comms/commsLogTypes.js';
@@ -61,7 +61,7 @@ describe('CommsLogFilters', () => {
 
   it('clears from date without throwing', async () => {
     const onFromChange = vi.fn();
-    const user = userEvent.setup();
+    const user = setupUser();
 
     render(
       <CommsLogFilters
@@ -81,7 +81,7 @@ describe('CommsLogFilters', () => {
 
   it('clears to date without throwing', async () => {
     const onToChange = vi.fn();
-    const user = userEvent.setup();
+    const user = setupUser();
 
     render(
       <CommsLogFilters

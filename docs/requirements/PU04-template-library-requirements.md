@@ -50,18 +50,18 @@ This slice does **not** own:
 ### Architectural posture
 
 - **Read pattern:** direct `SELECT` from `pump_organisation_templates` filtered by the active `organisation_id`, executed through `useSecureSupabase()` with TanStack Query. The slice does NOT call the adapter-backed `useCommTemplates` hook (that hook invokes a `pump-load-templates` Edge function and requires an adapter context PUMP-04 has no access to).
-- **Mutation pattern:** direct INSERT / UPDATE on `pump_organisation_templates` through `useSecureSupabase()`. Live RLS policies on the table (per platform-snapshot-2026-05-07 lines 264–270) accept authenticated writes when the caller holds the corresponding `{operation}:page.CommsTemplates` grant via `check_rbac_permission_with_context` + `get_app_id('PUMP')`. No Option-A migration is needed.
+- **Mutation pattern:** direct INSERT / UPDATE on `pump_organisation_templates` through `useSecureSupabase()`. Live RLS policies on the table (per platform-snapshot-2026-05-07 lines 264–270) accept authenticated writes when the caller holds the corresponding `{operation}:page.comms-templates` grant via `check_rbac_permission_with_context` + `get_app_id('PUMP')`. No Option-A migration is needed.
 - **Write contract for retirement:** UPDATE setting `is_active = false`. No DELETE statement is issued by PUMP-04 v1 against this table.
-- **Page guard:** `<PagePermissionGuard pageName="CommsTemplates" operation="read">` wraps the route. Default fallback `<AccessDenied />`. `useCan('create:page.CommsTemplates' | 'update:page.CommsTemplates' | 'delete:page.CommsTemplates', scope)` gates buttons / row actions per the PDLC RBAC API usage contract.
+- **Page guard:** `<PagePermissionGuard pageName="comms-templates" operation="read">` wraps the route. Default fallback `<AccessDenied />`. `useCan('create:page.comms-templates' | 'update:page.comms-templates' | 'delete:page.comms-templates', scope)` gates buttons / row actions per the PDLC RBAC API usage contract.
 - **Toaster:** `toast` is imported module-level from `@solvera/pace-core/components`. PUMP-01 mounts the `<ToastProvider>` (per cross-app-decisions.md 2026-05-04 toaster mount convention) so PUMP-04 can fire `'default' | 'destructive' | 'success'` toasts without a local provider mount.
 - **Merge-token handling:** PUMP-04 stores the raw `{{token}}` string an author types. On save, the slice computes `extractMergeTokens(subject + body_html + body_text)` (deduplicated) and persists the result to `merge_fields_used`. There is no catalogue-vs-token check in this slice.
 
 ### Page-level guards and evaluation ordering
 
-The route has both a page-level guard (`PagePermissionGuard pageName="CommsTemplates" operation="read"`) and a no-rows empty state. They are not in conflict — the empty state is data-state, not context-state. Evaluation order:
+The route has both a page-level guard (`PagePermissionGuard pageName="comms-templates" operation="read"`) and a no-rows empty state. They are not in conflict — the empty state is data-state, not context-state. Evaluation order:
 
 1. **Auth provider** (PUMP-01's `<AuthenticatedShell>`) resolves the active user and `selectedOrganisation`. If no organisation is selected, PUMP-01's shell already shows its no-org empty state and the route never mounts. PUMP-04 does not render its own no-org state.
-2. **`PagePermissionGuard`** evaluates `read:page.CommsTemplates` against the active scope (organisation-scoped: `{ organisationId: selectedOrganisation.id }`). While the guard's permission check is in flight (the `useCan` hook's `isLoading = true`), the guard renders `null` (its loading default; PUMP-04 does not pass a `loading` prop). On denied → `<AccessDenied />`. On allowed → the route content.
+2. **`PagePermissionGuard`** evaluates `read:page.comms-templates` against the active scope (organisation-scoped: `{ organisationId: selectedOrganisation.id }`). While the guard's permission check is in flight (the `useCan` hook's `isLoading = true`), the guard renders `null` (its loading default; PUMP-04 does not pass a `loading` prop). On denied → `<AccessDenied />`. On allowed → the route content.
 3. **Inside the route**, PUMP-04 mounts the templates list query. Its loading / error / empty states render only after the guard has admitted the user.
 
 **Scope passed to the guard:** `{ organisationId: selectedOrganisation.id }`. The guard is invoked only after PUMP-01's shell guarantees `selectedOrganisation.id` is non-null, so the guard never sees an undefined `organisationId`. If a subclass of state were to pass undefined `organisationId`, the underlying permission-check RPC would treat the scope as missing and return `false`, and the guard would render `<AccessDenied />` — but this code path is unreachable in PUMP because of the upstream shell gate.
@@ -74,7 +74,7 @@ The route has both a page-level guard (`PagePermissionGuard pageName="CommsTempl
 
 1. The route `/comms/templates` is reachable from the PUMP shell's secondary nav entry "Templates".
 2. On entry, the page renders the list view scoped to the operator's currently-selected organisation. The list is the only primary content; no separate empty dashboard surface exists.
-3. The page-level guard `PagePermissionGuard pageName="CommsTemplates" operation="read"` admits the user before the list query runs. Operators without `read:page.CommsTemplates` see the access-denied state instead of the list.
+3. The page-level guard `PagePermissionGuard pageName="comms-templates" operation="read"` admits the user before the list query runs. Operators without `read:page.comms-templates` see the access-denied state instead of the list.
 
 ### Loading state
 
@@ -84,7 +84,7 @@ The route has both a page-level guard (`PagePermissionGuard pageName="CommsTempl
 ### Empty state
 
 6. When the list query succeeds and returns zero rows for the operator's organisation, the table area is replaced with an inline empty-state panel. Copy: "No templates yet — create one to get started."
-7. When the operator has `create:page.CommsTemplates`, the empty-state panel includes a "Create template" CTA button that opens the editor `Dialog`. When the operator does not, the CTA is omitted; the copy alone is shown.
+7. When the operator has `create:page.comms-templates`, the empty-state panel includes a "Create template" CTA button that opens the editor `Dialog`. When the operator does not, the CTA is omitted; the copy alone is shown.
 
 ### Error state
 
@@ -93,7 +93,7 @@ The route has both a page-level guard (`PagePermissionGuard pageName="CommsTempl
 ### Primary content (list view)
 
 9. The list view is a single dense pace-core2 `DataTable` placed under a header row.
-10. Header row contains: page title "Templates", a search input, a "Show retired" toggle, and a "Create template" primary button (visible only when `useCan('create:page.CommsTemplates')` resolves true).
+10. Header row contains: page title "Templates", a search input, a "Show retired" toggle, and a "Create template" primary button (visible only when `useCan('create:page.comms-templates')` resolves true).
 11. The table has seven columns in this order: **Name**, **Channel**, **Subject preview**, **Strict-mode**, **Status**, **Created**, **Actions**.
 12. **Name** column shows the template's `name` field as plain text. A retired row's Name is rendered with muted text styling.
 13. **Channel** column shows a `Badge` with copy `Email` (channel = `email`) or `SMS` (channel = `sms`).
@@ -122,7 +122,7 @@ The route has both a page-level guard (`PagePermissionGuard pageName="CommsTempl
 27. Editor fields appear in this order: **Name** (required), **Description** (optional), **Channel** (required, segmented), **Subject** (required, email only — hidden when channel = sms), **Body** (required, channel-specific authoring), **Strict-mode toggle** (`require_merge_field_validation`).
 28. The body field is a single textarea. For `channel = 'email'`, the textarea is bound to `body_html`; the operator types HTML markup or plain text directly. For `channel = 'sms'`, the textarea is bound to `body_text`; `body_html` is written as `null` on save.
 29. On channel switch from `email` to `sms`, the subject input is hidden and any subject value is cleared from the form state (it will be written as `null` on save). On channel switch from `sms` to `email`, the subject input becomes visible and is required to save.
-30. The strict-mode toggle is visible to all operators viewing the editor; it is editable only when `useCan('update:page.CommsTemplates', scope)` resolves true. When read-only, the toggle is disabled with its current value visible.
+30. The strict-mode toggle is visible to all operators viewing the editor; it is editable only when `useCan('update:page.comms-templates', scope)` resolves true. When read-only, the toggle is disabled with its current value visible.
 31. The editor footer carries a primary `Save template` button and a secondary `Cancel` button. `Save template` is disabled while a save is in flight.
 
 ### Save outcomes
@@ -141,19 +141,19 @@ The route has both a page-level guard (`PagePermissionGuard pageName="CommsTempl
 
 38. **Preview** opens a preview `Dialog`. The dialog shows pace-core2 `MessagePreview` rendering the template's stored fields as a `CommDraft` (channel + subject + body_html + body_text + a synthetic `sender_name` for `MessagePreview`'s shape — see §6 BR-Preview). `mergeFields = []` (no catalogue is loaded). `sampleValues = {}`. A close affordance dismisses the dialog. Preview is read-only.
 39. **Edit** opens the editor `Dialog` in edit mode (per items 26–34).
-40. **Retire** is shown only on rows where `is_active = true`. It opens the retire confirmation `Dialog` (per items 41–43). It is hidden when `useCan('update:page.CommsTemplates')` resolves false (retirement is an UPDATE — `is_active = false`).
+40. **Retire** is shown only on rows where `is_active = true`. It opens the retire confirmation `Dialog` (per items 41–43). It is hidden when `useCan('update:page.comms-templates')` resolves false (retirement is an UPDATE — `is_active = false`).
 41. The retire confirmation `Dialog` shows copy "Retire 'X'? You can re-activate it later." (where X is the template's name). It carries a primary destructive `Retire` button and a secondary `Cancel` button.
 42. On Retire confirmed, the row's `is_active` is updated to `false`. The dialog closes. The list refreshes. A `'success'` toast announces "Template retired."
 43. On Retire cancelled, the dialog closes with no mutation.
-44. **Activate** is shown only on rows where `is_active = false` and only when `useCan('update:page.CommsTemplates')` resolves true. On click, the row's `is_active` is updated to `true` directly (no confirmation dialog — activation is non-destructive). The list refreshes. A `'success'` toast announces "Template activated."
+44. **Activate** is shown only on rows where `is_active = false` and only when `useCan('update:page.comms-templates')` resolves true. On click, the row's `is_active` is updated to `true` directly (no confirmation dialog — activation is non-destructive). The list refreshes. A `'success'` toast announces "Template activated."
 45. Save / retire / activate failures all surface a `'destructive'` toast with the failure cause and leave the row state unchanged.
 
 ### Permission-conditional rendering
 
-46. With `read:page.CommsTemplates` only: list, search, "Show retired" toggle, Preview row action are all visible. Create button, Edit row action, Retire row action, Activate row action are all hidden.
-47. With `read:page.CommsTemplates` + `create:page.CommsTemplates`: Create button (header) and empty-state CTA are also visible.
-48. With `read:page.CommsTemplates` + `update:page.CommsTemplates`: Edit, Retire, and Activate row actions are visible. Strict-mode toggle in editor is enabled.
-49. Without `read:page.CommsTemplates`: the `PagePermissionGuard` shows `<AccessDenied />` instead of the route content.
+46. With `read:page.comms-templates` only: list, search, "Show retired" toggle, Preview row action are all visible. Create button, Edit row action, Retire row action, Activate row action are all hidden.
+47. With `read:page.comms-templates` + `create:page.comms-templates`: Create button (header) and empty-state CTA are also visible.
+48. With `read:page.comms-templates` + `update:page.comms-templates`: Edit, Retire, and Activate row actions are visible. Strict-mode toggle in editor is enabled.
+49. Without `read:page.comms-templates`: the `PagePermissionGuard` shows `<AccessDenied />` instead of the route content.
 
 ### Navigation
 
@@ -189,11 +189,11 @@ The editor, preview, and retire-confirm surfaces are pace-core2 `Dialog` modals 
 
 - pace-core2 `Input` (search). Width on desktop: `w-64` (16rem). Placeholder copy `Search templates`. No leading icon (pace-core2 Tooltip is not exported by `@solvera/pace-core/components` and PUMP-04 must not introduce app-local tooltip primitives; the placeholder copy carries the affordance hint).
 - pace-core2 `Switch` (Show retired). Label text `Show retired` placed before the control. Default off (unchecked).
-- pace-core2 `Button` (Create template) with `variant="default"`. Hidden when `useCan('create:page.CommsTemplates')` returns false. `aria-label="Create template"`.
+- pace-core2 `Button` (Create template) with `variant="default"`. Hidden when `useCan('create:page.comms-templates')` returns false. `aria-label="Create template"`.
 
 **List `DataTable`:**
 
-- Mounted with `rbac={{ pageName: 'CommsTemplates' }}` so DataTable-level RBAC plumbing is consistent with the route guard.
+- Mounted with `rbac={{ pageName: 'comms-templates' }}` so DataTable-level RBAC plumbing is consistent with the route guard.
 - Columns (header copy, width hint, behaviour):
 
 | Column | Header | Width hint | Cell content |
@@ -213,9 +213,9 @@ The editor, preview, and retire-confirm surfaces are pace-core2 `Dialog` modals 
 **Row action button group** (Actions column, right-aligned):
 
 - pace-core2 `Button` `variant="ghost"` `size="small"` with copy `Preview`. Always shown.
-- pace-core2 `Button` `variant="ghost"` `size="small"` with copy `Edit`. Hidden when `useCan('update:page.CommsTemplates')` returns false.
-- pace-core2 `Button` `variant="ghost"` `size="small"` with copy `Retire`. Hidden when `is_active = false` or when `useCan('update:page.CommsTemplates')` returns false.
-- pace-core2 `Button` `variant="ghost"` `size="small"` with copy `Activate`. Hidden when `is_active = true` or when `useCan('update:page.CommsTemplates')` returns false.
+- pace-core2 `Button` `variant="ghost"` `size="small"` with copy `Edit`. Hidden when `useCan('update:page.comms-templates')` returns false.
+- pace-core2 `Button` `variant="ghost"` `size="small"` with copy `Retire`. Hidden when `is_active = false` or when `useCan('update:page.comms-templates')` returns false.
+- pace-core2 `Button` `variant="ghost"` `size="small"` with copy `Activate`. Hidden when `is_active = true` or when `useCan('update:page.comms-templates')` returns false.
 - All action buttons carry an explicit `aria-label` matching the visible copy plus the row's template name (e.g. `aria-label="Preview Welcome email"`).
 
 **Editor `Dialog` (Create / Edit):**
@@ -227,7 +227,7 @@ The editor, preview, and retire-confirm surfaces are pace-core2 `Dialog` modals 
 - **Channel** field — pace-core2 `Select` with `Label` "Channel". Two `SelectItem`s: `Email` (value `email`) and `SMS` (value `sms`). Required. Default `email` in Create mode.
 - **Subject** field — pace-core2 `Input` with `Label` "Subject". Visible only when channel = `email`. Required when visible. Placeholder `Welcome to {organisation}`. Inline error copy: `Subject is required for email templates.` Hidden entirely when channel = `sms`.
 - **Body** field — pace-core2 `Textarea` with `Label` "Body". Required. Visible row count: 8. Placeholder for email: `Hi {first_name}, welcome to our community.` Placeholder for SMS: `Reminder: your appointment is tomorrow at 10am.` Inline error copies: `Body is required.` (empty), `Merge tokens must be in the form {{token_name}}.` (shape-malformed token).
-- **Strict-mode** field — pace-core2 `Switch` with `Label` "Require merge-field validation at send time" and helper copy below the label: `When on, send is blocked if any merge token cannot be resolved for a recipient.` Switch is disabled when `useCan('update:page.CommsTemplates')` returns false; in that case the stored toggle value is visible but the operator cannot toggle it.
+- **Strict-mode** field — pace-core2 `Switch` with `Label` "Require merge-field validation at send time" and helper copy below the label: `When on, send is blocked if any merge token cannot be resolved for a recipient.` Switch is disabled when `useCan('update:page.comms-templates')` returns false; in that case the stored toggle value is visible but the operator cannot toggle it.
 - **Footer** — pace-core2 `DialogFooter` with two buttons right-aligned: secondary `Button` `variant="outline"` reading `Cancel`; primary `Button` `variant="default"` reading `Save template`. Primary is disabled while save is in flight; on submit it shows pace-core2's standard pending-state treatment (text + leading spinner).
 
 **Preview `Dialog`:**
@@ -247,7 +247,7 @@ The editor, preview, and retire-confirm surfaces are pace-core2 `Dialog` modals 
 
 - **Loading (list query):** the `DataTable` body renders a 5-row skeleton placeholder using `DataTable`'s `isLoading` prop. The header row remains fully interactive.
 - **Loading (guard):** the route renders nothing under the shell; the operator sees PUMP-01's shell layout but no PUMP-04 content. (This is the `PagePermissionGuard`'s default loading behaviour with no `loading` prop passed.)
-- **Empty:** the table area is replaced by an inline empty-state panel with icon-free centred copy `No templates yet — create one to get started.` and (when `useCan('create:page.CommsTemplates')` is true) a primary `Button` reading `Create template` directly under the copy.
+- **Empty:** the table area is replaced by an inline empty-state panel with icon-free centred copy `No templates yet — create one to get started.` and (when `useCan('create:page.comms-templates')` is true) a primary `Button` reading `Create template` directly under the copy.
 - **Error:** the table area is replaced by an inline error panel with copy `Couldn't load templates.` plus a `Button` `variant="outline"` reading `Retry`. A `'destructive'` toast appears at the same time carrying the underlying error message.
 - **Access denied:** when the page guard denies, the route content is replaced entirely by pace-core2 `<AccessDenied />` (the component renders a friendly access-denied panel inside the shell; PUMP-04 passes no custom fallback).
 - **Save success:** the editor closes and a `'success'` toast appears with copy `Template created.` (Create) or `Template updated.` (Edit). The list rows refresh in place.
@@ -270,20 +270,20 @@ The editor, preview, and retire-confirm surfaces are pace-core2 `Dialog` modals 
 
 | Permission state | Surface | Treatment |
 |---|---|---|
-| No `read:page.CommsTemplates` | Entire route | `<AccessDenied />` replaces the route content. |
-| `read:page.CommsTemplates` only | List, search, "Show retired" toggle | Visible. |
-| `read:page.CommsTemplates` only | Create button (header), empty-state CTA | Hidden. |
-| `read:page.CommsTemplates` only | Edit / Retire / Activate row actions | Hidden. |
-| `read:page.CommsTemplates` only | Preview row action | Visible. |
-| `read:page.CommsTemplates` only | Editor `Dialog` (if reached via deep link or programmatic) | Not reachable in v1 — there is no deep link; create / edit only opens via gated buttons. |
-| `read` + `create:page.CommsTemplates` | Create button (header), empty-state CTA | Visible. |
-| `read` + `create:page.CommsTemplates` | Editor `Dialog` strict-mode toggle | Disabled (read-only display of current value). |
-| `read` + `update:page.CommsTemplates` | Edit row action | Visible. |
-| `read` + `update:page.CommsTemplates` | Retire row action (active rows) | Visible. |
-| `read` + `update:page.CommsTemplates` | Activate row action (retired rows) | Visible. |
-| `read` + `update:page.CommsTemplates` | Editor `Dialog` strict-mode toggle | Enabled (operator can change). |
+| No `read:page.comms-templates` | Entire route | `<AccessDenied />` replaces the route content. |
+| `read:page.comms-templates` only | List, search, "Show retired" toggle | Visible. |
+| `read:page.comms-templates` only | Create button (header), empty-state CTA | Hidden. |
+| `read:page.comms-templates` only | Edit / Retire / Activate row actions | Hidden. |
+| `read:page.comms-templates` only | Preview row action | Visible. |
+| `read:page.comms-templates` only | Editor `Dialog` (if reached via deep link or programmatic) | Not reachable in v1 — there is no deep link; create / edit only opens via gated buttons. |
+| `read` + `create:page.comms-templates` | Create button (header), empty-state CTA | Visible. |
+| `read` + `create:page.comms-templates` | Editor `Dialog` strict-mode toggle | Disabled (read-only display of current value). |
+| `read` + `update:page.comms-templates` | Edit row action | Visible. |
+| `read` + `update:page.comms-templates` | Retire row action (active rows) | Visible. |
+| `read` + `update:page.comms-templates` | Activate row action (retired rows) | Visible. |
+| `read` + `update:page.comms-templates` | Editor `Dialog` strict-mode toggle | Enabled (operator can change). |
 
-(The slice does not use `delete:page.CommsTemplates` for retire — retirement is an UPDATE, not a DELETE, in v1. The DELETE policy on the table exists but PUMP-04 issues no DELETE statement against `pump_organisation_templates`.)
+(The slice does not use `delete:page.comms-templates` for retire — retirement is an UPDATE, not a DELETE, in v1. The DELETE policy on the table exists but PUMP-04 issues no DELETE statement against `pump_organisation_templates`.)
 
 ---
 
@@ -291,7 +291,7 @@ The editor, preview, and retire-confirm surfaces are pace-core2 `Dialog` modals 
 
 ### BR-OrgIsolation — organisation isolation
 
-All list reads filter by `organisation_id = selectedOrganisation.id` as an explicit `.eq()` clause. All inserts include `organisation_id` from the active selection. RLS policies on `pump_organisation_templates` (per platform-snapshot-2026-05-07 lines 264–270) double-check the read / insert / update via `check_rbac_permission_with_context(<operation>, 'CommsTemplates', organisation_id, NULL::text, get_app_id('PUMP'))`.
+All list reads filter by `organisation_id = selectedOrganisation.id` as an explicit `.eq()` clause. All inserts include `organisation_id` from the active selection. RLS policies on `pump_organisation_templates` (per platform-snapshot-2026-05-07 lines 264–270) double-check the read / insert / update via `check_rbac_permission_with_context(<operation>, 'comms-templates', organisation_id, NULL::text, get_app_id('PUMP'))`.
 
 ### BR-NameRequired — template name is required
 
@@ -332,7 +332,7 @@ Authors do not edit `body_text` directly when `channel = 'email'`. When `channel
 
 ### BR-StrictModeAuth — strict-mode toggle gating
 
-The strict-mode toggle is visible in the editor to all readers but is editable only by users with `update:page.CommsTemplates`. There is no finer-grained gate than the rest of the form's update permission.
+The strict-mode toggle is visible in the editor to all readers but is editable only by users with `update:page.comms-templates`. There is no finer-grained gate than the rest of the form's update permission.
 
 ### BR-CreatedBy — created_by on insert
 
@@ -348,7 +348,7 @@ The Retire action issues an UPDATE setting `is_active = false`. It does not issu
 
 ### BR-ActivateTemplate — activate restores
 
-The Activate action is visible only on retired rows (`is_active = false`) and only when the operator has `update:page.CommsTemplates`. It issues an UPDATE setting `is_active = true`. No confirmation dialog (activation is non-destructive).
+The Activate action is visible only on retired rows (`is_active = false`) and only when the operator has `update:page.comms-templates`. It issues an UPDATE setting `is_active = true`. No confirmation dialog (activation is non-destructive).
 
 ### BR-MergeFieldsUsedDerived — merge_fields_used derivation
 
@@ -434,9 +434,9 @@ Retirement is gated by a pace-core2 `Dialog`-based confirmation step. The dialog
 | Action | Show when |
 |---|---|
 | Preview | Always (every row, every reader). |
-| Edit | `is_active = true` rows AND `useCan('update:page.CommsTemplates')`. (Retired rows do not show Edit in v1; activate first.) |
-| Retire | `is_active = true` rows AND `useCan('update:page.CommsTemplates')`. |
-| Activate | `is_active = false` rows AND `useCan('update:page.CommsTemplates')`. |
+| Edit | `is_active = true` rows AND `useCan('update:page.comms-templates')`. (Retired rows do not show Edit in v1; activate first.) |
+| Retire | `is_active = true` rows AND `useCan('update:page.comms-templates')`. |
+| Activate | `is_active = false` rows AND `useCan('update:page.comms-templates')`. |
 
 ---
 
@@ -448,13 +448,13 @@ PUMP-04 publishes one cross-slice contract: the row shape of `pump_organisation_
 
 ### Read contract
 
-- **List query.** Direct `SELECT` from `pump_organisation_templates` filtered by `organisation_id = selectedOrganisation.id`. Returned columns: `id`, `organisation_id`, `name`, `description`, `channel`, `subject`, `body_html`, `body_text`, `merge_fields_used`, `is_active`, `require_merge_field_validation`, `created_by`, `created_at`, `updated_at`. Ordered by `created_at` DESC. RLS check: `read:page.CommsTemplates` via `check_rbac_permission_with_context`.
+- **List query.** Direct `SELECT` from `pump_organisation_templates` filtered by `organisation_id = selectedOrganisation.id`. Returned columns: `id`, `organisation_id`, `name`, `description`, `channel`, `subject`, `body_html`, `body_text`, `merge_fields_used`, `is_active`, `require_merge_field_validation`, `created_by`, `created_at`, `updated_at`. Ordered by `created_at` DESC. RLS check: `read:page.comms-templates` via `check_rbac_permission_with_context`.
 - **Single-row fetch (for editor / preview).** Inline from the loaded list query result; no separate row-fetch RPC.
 - The slice does NOT call `pump_list_merge_fields(...)`. The slice does NOT call any Edge function. The slice does NOT call `useCommTemplates` or `useCommMergeFields` (both adapter-backed, unsuitable for direct CRUD).
 
 ### Write contract
 
-- **Create.** `INSERT INTO pump_organisation_templates (organisation_id, name, description, channel, subject, body_html, body_text, merge_fields_used, require_merge_field_validation, created_by) VALUES (...) RETURNING *`. RLS check: `create:page.CommsTemplates`.
+- **Create.** `INSERT INTO pump_organisation_templates (organisation_id, name, description, channel, subject, body_html, body_text, merge_fields_used, require_merge_field_validation, created_by) VALUES (...) RETURNING *`. RLS check: `create:page.comms-templates`.
   - `organisation_id` = active org id.
   - `name`, `description`, `channel`, `subject`, `body_html`, `body_text` per editor input + BR-BodyTextDerivation + BR-SubjectChannelRule.
   - `merge_fields_used` per BR-MergeFieldsUsedDerived.
@@ -463,21 +463,21 @@ PUMP-04 publishes one cross-slice contract: the row shape of `pump_organisation_
   - `is_active` is omitted (defaults to `true` per dev-db).
   - Success outcome: row inserted; client refreshes the list query; success toast `Template created.`.
   - Failure outcomes: validation error (handled before call), RLS rejection (destructive toast), Postgres / network error (destructive toast).
-- **Update.** `UPDATE pump_organisation_templates SET name = $1, description = $2, channel = $3, subject = $4, body_html = $5, body_text = $6, merge_fields_used = $7, require_merge_field_validation = $8 WHERE id = $9 RETURNING *`. RLS check: `update:page.CommsTemplates`. Same column derivations as Create. Success toast `Template updated.`.
-- **Retire.** `UPDATE pump_organisation_templates SET is_active = false WHERE id = $1 RETURNING *`. RLS check: `update:page.CommsTemplates`. Success toast `Template retired.`.
-- **Activate.** `UPDATE pump_organisation_templates SET is_active = true WHERE id = $1 RETURNING *`. RLS check: `update:page.CommsTemplates`. Success toast `Template activated.`.
+- **Update.** `UPDATE pump_organisation_templates SET name = $1, description = $2, channel = $3, subject = $4, body_html = $5, body_text = $6, merge_fields_used = $7, require_merge_field_validation = $8 WHERE id = $9 RETURNING *`. RLS check: `update:page.comms-templates`. Same column derivations as Create. Success toast `Template updated.`.
+- **Retire.** `UPDATE pump_organisation_templates SET is_active = false WHERE id = $1 RETURNING *`. RLS check: `update:page.comms-templates`. Success toast `Template retired.`.
+- **Activate.** `UPDATE pump_organisation_templates SET is_active = true WHERE id = $1 RETURNING *`. RLS check: `update:page.comms-templates`. Success toast `Template activated.`.
 - **No DELETE.** PUMP-04 does not issue DELETE statements against this table in v1.
 
 ### RLS / permission contracts
 
 | Action | RLS policy | Required RBAC |
 |---|---|---|
-| SELECT | `rbac_select_pump_organisation_templates` | `read:page.CommsTemplates` |
-| INSERT | `rbac_insert_pump_organisation_templates` | `create:page.CommsTemplates` |
-| UPDATE | `rbac_update_pump_organisation_templates` | `update:page.CommsTemplates` |
-| DELETE | `rbac_delete_pump_organisation_templates` | `delete:page.CommsTemplates` (not used by PUMP-04 v1) |
+| SELECT | `rbac_select_pump_organisation_templates` | `read:page.comms-templates` |
+| INSERT | `rbac_insert_pump_organisation_templates` | `create:page.comms-templates` |
+| UPDATE | `rbac_update_pump_organisation_templates` | `update:page.comms-templates` |
+| DELETE | `rbac_delete_pump_organisation_templates` | `delete:page.comms-templates` (not used by PUMP-04 v1) |
 
-All policies resolve via `check_rbac_permission_with_context(<operation>, 'CommsTemplates', organisation_id, NULL::text, get_app_id('PUMP'))`.
+All policies resolve via `check_rbac_permission_with_context(<operation>, 'comms-templates', organisation_id, NULL::text, get_app_id('PUMP'))`.
 
 ### Cross-slice handoffs
 
@@ -511,13 +511,13 @@ Verify against project `rkytnffgmwnnmewevqgp` (per global operating rules → De
 
 1. `pump_organisation_templates` exists with the column shape in §3 and platform-snapshot-2026-05-07 lines 112–131.
 2. The five RLS policies (`service_role_can_manage_all_pump_organisation_templates`, `rbac_insert_*`, `rbac_select_*`, `rbac_update_*`, `rbac_delete_*`) are present and resolve via `check_rbac_permission_with_context`.
-3. The `CommsTemplates` page is registered in `rbac_app_pages` for the PUMP app (app id resolved via `get_app_id('PUMP')`).
+3. The `comms-templates` page is registered in `rbac_app_pages` for the PUMP app (app id resolved via `get_app_id('PUMP')`).
 4. The `comm_channel` enum has values `email` and `sms`.
 
 ### Domain / decision references
 
 - `../../../packages/core/docs/requirements/CR23-comms-platform.md` — comms-platform contract; defines the row shape PUMP-05 / `CommSendAdapter.loadTemplates` consumes.
-- [`pump-architecture.md`](./pump-architecture.md) § "RBAC model (PUMP management app)" — page-key registry; PUMP-04 uses `CommsTemplates` exclusively.
+- [`pump-architecture.md`](./pump-architecture.md) § "RBAC model (PUMP management app)" — page-key registry; PUMP-04 uses `comms-templates` exclusively.
 
 ---
 
@@ -562,28 +562,28 @@ Verify against project `rkytnffgmwnnmewevqgp` (per global operating rules → De
 
 ### Page-level access
 
-`<PagePermissionGuard pageName="CommsTemplates" operation="read">` wraps the `/comms/templates` route. Default fallback `<AccessDenied />`. Scope passed to the guard: `{ organisationId: selectedOrganisation.id }`. The guard's loading state renders `null` (no `loading` prop is supplied).
+`<PagePermissionGuard pageName="comms-templates" operation="read">` wraps the `/comms/templates` route. Default fallback `<AccessDenied />`. Scope passed to the guard: `{ organisationId: selectedOrganisation.id }`. The guard's loading state renders `null` (no `loading` prop is supplied).
 
 ### Action-level access
 
 | Action | Permission gate | Visible / enabled when |
 |---|---|---|
-| List / Search / Show retired toggle / Preview row action | `read:page.CommsTemplates` (gated by the page guard) | Always once the route content renders. |
-| Create button (header) and empty-state CTA | `useCan('create:page.CommsTemplates', { organisationId })` | True. |
-| Edit row action | `useCan('update:page.CommsTemplates', { organisationId })` | True AND row is `is_active = true`. |
-| Retire row action | `useCan('update:page.CommsTemplates', { organisationId })` | True AND row is `is_active = true`. |
-| Activate row action | `useCan('update:page.CommsTemplates', { organisationId })` | True AND row is `is_active = false`. |
-| Editor strict-mode toggle (interactive) | `useCan('update:page.CommsTemplates', { organisationId })` | True. (When false, toggle is rendered disabled with current value.) |
+| List / Search / Show retired toggle / Preview row action | `read:page.comms-templates` (gated by the page guard) | Always once the route content renders. |
+| Create button (header) and empty-state CTA | `useCan('create:page.comms-templates', { organisationId })` | True. |
+| Edit row action | `useCan('update:page.comms-templates', { organisationId })` | True AND row is `is_active = true`. |
+| Retire row action | `useCan('update:page.comms-templates', { organisationId })` | True AND row is `is_active = true`. |
+| Activate row action | `useCan('update:page.comms-templates', { organisationId })` | True AND row is `is_active = false`. |
+| Editor strict-mode toggle (interactive) | `useCan('update:page.comms-templates', { organisationId })` | True. (When false, toggle is rendered disabled with current value.) |
 
 ### Role × action matrix
 
 | Role / capability | Read list | Preview | Create | Edit | Retire | Activate | Strict-mode toggle |
 |---|---|---|---|---|---|---|---|
 | No PUMP grants | No (AccessDenied) | n/a | n/a | n/a | n/a | n/a | n/a |
-| `read:page.CommsTemplates` only | Yes | Yes | No | No | No | No | Disabled |
-| `read` + `create:page.CommsTemplates` | Yes | Yes | Yes | No | No | No | Disabled |
-| `read` + `update:page.CommsTemplates` | Yes | Yes | No | Yes | Yes | Yes | Enabled |
-| `read` + `create` + `update:page.CommsTemplates` | Yes | Yes | Yes | Yes | Yes | Yes | Enabled |
+| `read:page.comms-templates` only | Yes | Yes | No | No | No | No | Disabled |
+| `read` + `create:page.comms-templates` | Yes | Yes | Yes | No | No | No | Disabled |
+| `read` + `update:page.comms-templates` | Yes | Yes | No | Yes | Yes | Yes | Enabled |
+| `read` + `create` + `update:page.comms-templates` | Yes | Yes | Yes | Yes | Yes | Yes | Enabled |
 | Service role (Edge) | n/a — Edge does not consume PUMP-04 in v1 |
 
 ### Proxy / impersonation
@@ -594,17 +594,17 @@ Standard PDLC proxy rules apply. PUMP-04 does not introduce a slice-specific pro
 
 ## 11. Acceptance criteria
 
-1. **Given** an authenticated operator with `read:page.CommsTemplates` and at least one template in their organisation, **when** they navigate to `/comms/templates`, **then** the list view renders the seven-column DataTable with one row per template, sorted by `created_at` descending. (Traces §4 items 1–3, 9–18.)
-2. **Given** an operator with `read:page.CommsTemplates` and zero templates in their organisation, **when** they navigate to `/comms/templates`, **then** the inline empty-state panel renders with copy "No templates yet — create one to get started." (Traces §4 item 6.)
-3. **Given** an operator with `read:page.CommsTemplates` but without `create:page.CommsTemplates` and zero templates, **when** they navigate to `/comms/templates`, **then** the empty-state panel shows the copy without a Create CTA. (Traces §4 items 6–7, 47.)
-4. **Given** an operator without `read:page.CommsTemplates`, **when** they navigate to `/comms/templates`, **then** the route renders `AccessDenied` instead of the list. (Traces §4 item 49; §10 page-level access.)
-5. **Given** an operator with `create:page.CommsTemplates`, **when** they click "Create template" and submit a valid email template (Name = "Welcome", Channel = email, Subject = "Hi", Body = `<p>Hello {{first_name}}</p>`), **then** a row is inserted into `pump_organisation_templates` with `body_text` populated as `Hello {{first_name}}` (HTML stripped per BR-BodyTextDerivation), `merge_fields_used = ['{{first_name}}']`, `require_merge_field_validation = false`, `created_by = auth.uid()`, the editor closes, the list refreshes, and a success toast reads "Template created." (Traces §4 items 24–32; §6 BR-BodyTextDerivation, BR-MergeFieldsUsedDerived, BR-CreatedBy.)
-6. **Given** an operator with `create:page.CommsTemplates` editing a Create form, **when** they submit with Name empty, **then** the editor blocks the save, surfaces inline copy "Name is required." on the Name field, and shows a destructive toast "Fix the highlighted fields before saving." (Traces §4 item 35; §6 BR-NameRequired, BR-FormValidation.)
+1. **Given** an authenticated operator with `read:page.comms-templates` and at least one template in their organisation, **when** they navigate to `/comms/templates`, **then** the list view renders the seven-column DataTable with one row per template, sorted by `created_at` descending. (Traces §4 items 1–3, 9–18.)
+2. **Given** an operator with `read:page.comms-templates` and zero templates in their organisation, **when** they navigate to `/comms/templates`, **then** the inline empty-state panel renders with copy "No templates yet — create one to get started." (Traces §4 item 6.)
+3. **Given** an operator with `read:page.comms-templates` but without `create:page.comms-templates` and zero templates, **when** they navigate to `/comms/templates`, **then** the empty-state panel shows the copy without a Create CTA. (Traces §4 items 6–7, 47.)
+4. **Given** an operator without `read:page.comms-templates`, **when** they navigate to `/comms/templates`, **then** the route renders `AccessDenied` instead of the list. (Traces §4 item 49; §10 page-level access.)
+5. **Given** an operator with `create:page.comms-templates`, **when** they click "Create template" and submit a valid email template (Name = "Welcome", Channel = email, Subject = "Hi", Body = `<p>Hello {{first_name}}</p>`), **then** a row is inserted into `pump_organisation_templates` with `body_text` populated as `Hello {{first_name}}` (HTML stripped per BR-BodyTextDerivation), `merge_fields_used = ['{{first_name}}']`, `require_merge_field_validation = false`, `created_by = auth.uid()`, the editor closes, the list refreshes, and a success toast reads "Template created." (Traces §4 items 24–32; §6 BR-BodyTextDerivation, BR-MergeFieldsUsedDerived, BR-CreatedBy.)
+6. **Given** an operator with `create:page.comms-templates` editing a Create form, **when** they submit with Name empty, **then** the editor blocks the save, surfaces inline copy "Name is required." on the Name field, and shows a destructive toast "Fix the highlighted fields before saving." (Traces §4 item 35; §6 BR-NameRequired, BR-FormValidation.)
 7. **Given** an operator authoring an email template with body `Hello {{ first_name }}` (well-formed token), **when** they submit, **then** the save proceeds and the persisted `merge_fields_used` array contains `{{first_name}}`. (Traces §4 item 32; §6 BR-MergeFieldsUsedDerived, BR-TokenValidation.)
 8. **Given** an operator authoring a template with a shape-malformed merge token (e.g. body `Hello {{ first_name`), **when** they submit, **then** the editor blocks save, surfaces inline copy "Merge tokens must be in the form `{{token_name}}`." on the Body field, and shows a destructive toast. (Traces §4 item 36; §6 BR-TokenValidation.)
-9. **Given** an operator with `update:page.CommsTemplates`, **when** they click an active row's Retire action and confirm in the retire-confirm dialog, **then** the row's `is_active` becomes `false`, the dialog closes, the list refreshes, and a success toast reads "Template retired." (Traces §4 items 40–42; §6 BR-RetireTemplate, BR-RetireConfirmation.)
-10. **Given** an operator with `update:page.CommsTemplates` and "Show retired" toggled on, **when** they click a retired row's Activate action, **then** the row's `is_active` becomes `true`, the list refreshes, and a success toast reads "Template activated." No confirmation dialog appears. (Traces §4 item 44; §6 BR-ActivateTemplate.)
-11. **Given** an operator with `read:page.CommsTemplates` only, **when** the list view renders, **then** the Create button, Edit row action, Retire row action, and Activate row action are all hidden. The Preview row action is visible. (Traces §4 items 46–48; §10 role × action matrix.)
+9. **Given** an operator with `update:page.comms-templates`, **when** they click an active row's Retire action and confirm in the retire-confirm dialog, **then** the row's `is_active` becomes `false`, the dialog closes, the list refreshes, and a success toast reads "Template retired." (Traces §4 items 40–42; §6 BR-RetireTemplate, BR-RetireConfirmation.)
+10. **Given** an operator with `update:page.comms-templates` and "Show retired" toggled on, **when** they click a retired row's Activate action, **then** the row's `is_active` becomes `true`, the list refreshes, and a success toast reads "Template activated." No confirmation dialog appears. (Traces §4 item 44; §6 BR-ActivateTemplate.)
+11. **Given** an operator with `read:page.comms-templates` only, **when** the list view renders, **then** the Create button, Edit row action, Retire row action, and Activate row action are all hidden. The Preview row action is visible. (Traces §4 items 46–48; §10 role × action matrix.)
 12. **Given** an operator clicks Preview on any row, **when** the preview dialog opens, **then** `MessagePreview` renders the row's content; for an email row with body `<p>Hello {{first_name}}</p>` the preview shows the sanitised HTML rendering with the `{{first_name}}` token wrapped in `<mark>` and listed in the unresolved-tokens Alert (because `sampleValues = {}` and `mergeFields = []`). (Traces §4 item 38; §6 BR-Preview, BR-PreviewSampleValues.)
 13. **Given** the templates list query fails (e.g. RLS rejection or network error), **when** the failure surfaces, **then** the table area shows the error panel with copy "Couldn't load templates." and a Retry button, and a destructive toast carries the underlying error message. (Traces §4 item 8; §6 BR-FetchError.)
 14. **Given** the operator has typed valid template content and clicks Save, **when** the database call fails (e.g. simulated RLS rejection), **then** the editor remains open with form values intact and a destructive toast carries the failure cause. No row is inserted or updated. (Traces §4 item 37; §6 BR-SaveFailure.)
@@ -621,7 +621,7 @@ Slice-unique proof steps (feed the QA pack):
 1. **Live RLS check.** As an authenticated operator without any PUMP grants, query `SELECT COUNT(*) FROM pump_organisation_templates WHERE organisation_id = '<their-org>'::uuid;` directly via the secure Supabase client — confirm zero rows returned regardless of actual row count, demonstrating RLS bypass impossibility.
 2. **Round-trip body derivation.** Save an email template with `body_html = '<p>Hello <strong>{{first_name}}</strong>!</p>'`. Inspect the persisted row in dev-db — confirm `body_text = 'Hello {{first_name}}!'` (or with single space between collapsed runs of whitespace).
 3. **`merge_fields_used` deduplication.** Save a template with body `<p>Hi {{first_name}} — {{first_name}} is great. {{org_name}} welcomes you.</p>`. Inspect the persisted row — confirm `merge_fields_used = ['{{first_name}}', '{{org_name}}']` with two entries, not three.
-4. **Strict-mode toggle gate.** As an operator with `read:page.CommsTemplates` only, open the Preview dialog (allowed). Then attempt to open the editor in Edit mode — confirm the Edit action is hidden in the row's Actions cell (the path to mutating strict-mode is closed).
+4. **Strict-mode toggle gate.** As an operator with `read:page.comms-templates` only, open the Preview dialog (allowed). Then attempt to open the editor in Edit mode — confirm the Edit action is hidden in the row's Actions cell (the path to mutating strict-mode is closed).
 5. **Retire vs hard-delete.** Retire a template, then confirm directly in dev-db that the row is still present with `is_active = false` and that no DELETE statement is logged in the Postgres query log for this slice.
 6. **Activate flow.** With "Show retired" on, click Activate on a retired row. Confirm the row's `is_active = true` in dev-db and that "Inactive" badge disappears immediately.
 7. **Search across name + description.** Create two templates: A with name "Welcome", description "First contact". B with name "Reminder", description "Reminder welcome wagon". Type "welcome" — confirm both rows match (A by name, B by description).
@@ -662,7 +662,7 @@ n/a — standard PDLC quality gates apply, plus the verification scenarios in §
 - Do not import `MergeFieldToolbar`, `useCommTemplates`, `useCommMergeFields`, `getUnresolvedTokens`, `resolveMergeTokens`, `insertMergeToken`, `sanitiseCommHtml`, or `validateCommDraft` into PUMP-04. The first six belong to the catalogue / token-insert surface excluded from v1; `validateCommDraft` is unsuitable because it requires sender-identity fields PUMP-04 does not own.
 - Do not introduce a merge-field toolbar or token-insert UI in v1.
 - Do not block save on unknown-but-well-formed merge tokens. Save blocks only on shape-malformed tokens.
-- Do not use the lower-case-snake `comms_templates` page key. PUMP-04 uses `CommsTemplates` exclusively.
+- Do not use the lower-case-snake `comms_templates` page key. PUMP-04 uses `comms-templates` exclusively.
 - Do not call `sendSystemNotification` or in any way address `pump_system_templates` from PUMP-04. System templates are platform-managed copy invoked by source apps.
 - Do not import `TooltipProvider` or any Tooltip primitive — none is exported by `@solvera/pace-core/components`. Do not introduce app-local Tooltip primitives. Use inline labels, `aria-label`, and helper copy instead.
 - Do not write a parallel app-local sanitiser. `MessagePreview` handles sanitisation; PUMP-04 must not bypass it with raw `dangerouslySetInnerHTML`.
@@ -673,7 +673,7 @@ n/a — standard PDLC quality gates apply, plus the verification scenarios in §
 ## 17. References
 
 - [`pump-project-brief.md`](./pump-project-brief.md)
-- [`pump-architecture.md`](./pump-architecture.md) — § "RBAC model (PUMP management app)" (page-key registry; PUMP-04 uses `CommsTemplates`); § "Bounded contexts → Templates" (the template-library bounded context); § "Slice overview" (PUMP-04 row).
+- [`pump-architecture.md`](./pump-architecture.md) — § "RBAC model (PUMP management app)" (page-key registry; PUMP-04 uses `comms-templates`); § "Bounded contexts → Templates" (the template-library bounded context); § "Slice overview" (PUMP-04 row).
 - [`pump-feature-list.md`](./pump-feature-list.md) — derived feature inventory (traceability).
 - [`pump-user-stories.md`](./pump-user-stories.md) — derived user stories (traceability).
 - **PUMP-01** (PUMP shell + IA + RBAC): owns the `<AuthenticatedShell>`, `<ToastProvider>` mount, and the route registration that mounts PUMP-04 at `/comms/templates`. Toaster mount convention applied (per cross-app-decisions.md 2026-05-04). PUMP-01's Tooltip capability-gap callout applies here.
@@ -684,6 +684,6 @@ n/a — standard PDLC quality gates apply, plus the verification scenarios in §
 
 ### Outstanding follow-ups (not blocking PUMP-04 v1)
 
-- **Platform follow-up — legacy `comms_templates` page key on dev-db.** The legacy lower-case-snake `comms_templates` page persists on dev-db's `rbac_app_pages`. The rebuild does not adopt it; any user grants currently held on `comms_templates` must be re-issued on `CommsTemplates` for impacted operators before they can use PUMP-04. PUMP-04 SPA gates use `CommsTemplates` only.
+- **Platform follow-up — legacy `comms_templates` page key on dev-db.** The legacy lower-case-snake `comms_templates` page persists on dev-db's `rbac_app_pages`. The rebuild does not adopt it; any user grants currently held on `comms_templates` must be re-issued on `comms-templates` for impacted operators before they can use PUMP-04. PUMP-04 SPA gates use `comms-templates` only.
 - **Future enhancement — poolless catalogue read.** Once a poolless catalogue read contract exists in pace-core2 / dev-db (e.g. a new `pump_list_merge_fields_global(organisation_id, channel)` RPC variant or an adapter pattern that supplies a synthetic pool), PUMP-04 may surface a merge-field toolbar via that approved contract. Not blocking for v1 — token validation in PUMP-04 stays shape-only until then.
 - **pace-core2 capability — Tooltip primitives.** `Tooltip` / `TooltipProvider` are not exported by `@solvera/pace-core/components` at PUMP-04 authoring time. PUMP-04 sidesteps with inline labels and `aria-label` per §9.2. References PUMP-01's Tooltip capability-gap callout; not blocking for PUMP-04 v1.

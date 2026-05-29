@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -323,7 +323,7 @@ describe('ComposePage', () => {
   });
 
   it('navigates home on clean cancel', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(navigateMock).toHaveBeenCalledWith('/');
@@ -331,7 +331,7 @@ describe('ComposePage', () => {
 
   it('opens discard dialog when draft is dirty', async () => {
     draftBodyText = 'Hello';
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByRole('dialog')).toBeTruthy();
@@ -340,7 +340,7 @@ describe('ComposePage', () => {
   });
 
   it('shows send success toast without navigating away', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Send now' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -351,7 +351,7 @@ describe('ComposePage', () => {
   });
 
   it('shows destructive toast on send error', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Trigger empty pool' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -364,7 +364,7 @@ describe('ComposePage', () => {
   });
 
   it('shows schedule failed toast on schedule error', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Trigger schedule error' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -376,7 +376,7 @@ describe('ComposePage', () => {
   });
 
   it('shows schedule success toast and light-resets recipient mode', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getByRole('button', { name: 'Confirm schedule' }));
     expect(toastMock).toHaveBeenCalledWith(

@@ -46,7 +46,7 @@ Only explicit or strongly implied rebuild features are listed.
   - `docs/requirements/pump/pump-project-brief.md` (Known redesign areas: IA & routes)
 
 ### A4. Route gating via pace-core2 page RBAC
-- Description: Gate canonical PUMP routes through pace-core2 page permissions for CommsLog and CommsTemplates.
+- Description: Gate canonical PUMP routes through pace-core2 page permissions for comms-log and comms-templates.
 - Atomic test: User without required page grant is denied route access.
 - Source refs:
   - `docs/requirements/pump/PU01-app-shell-information-architecture-requirements.md` (API / Contract)

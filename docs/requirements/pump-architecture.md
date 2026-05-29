@@ -16,7 +16,7 @@
 | **DB design decisions**     | `**docs/database/decisions/DB-change-decisions-p4.md`** (pace-core2) — **DB-404`–`DB-411** (incl. **DB-407** pre-migration, **DB-405** reporting view)                                                                                                                                                                        |
 | **Design vs build**         | **Slice requirements / design:** may proceed using **CR23** + **DB-change-decisions-p4** as contracts. **Application & Edge code:** merge only when the **p4 target** is present on **dev-db** (MCP verification).                                                                                                                     |
 | **pace-core2 consumption**  | **Now:** local `**~/Documents/GitHub/pace-core2`** (workspace / link) for current scoped entrypoints. **Later:** published `**@solvera/pace-core`** (or equivalent) — plan an import/bundling migration. The shared comms entrypoint is a **CR23 dependency** and is not yet a live package export in this repo state.                                                                                                                                                      |
-| **RBAC**                    | **PACE page model** — `**CommsLog`** and `**CommsTemplates`** in the PUMP app (see § RBAC model (PUMP management app)). `**CommRbacContext**` booleans are **derived** from those grants. Edge validates `**source_context_id`**. **Send-time suppression** (`**pump_suppression`** skips at `**pump-send`**) — **yes** (CR23/p4 target). **User / operator unsubscribe management** (subscribers or staff managing marketing opt-outs in PUMP) — **not in v1** (see § Send-time suppression vs user/operator unsubscribe). |
+| **RBAC**                    | **PACE page model** — `**comms-log`**, `**comms-templates`**, and `**comms-settings`** (catalogue only; no v1 route for settings) in the PUMP app (see § RBAC model (PUMP management app)). `**CommRbacContext**` booleans are **derived** from those grants. Edge validates `**source_context_id`**. **Send-time suppression** (`**pump_suppression`** skips at `**pump-send`**) — **yes** (CR23/p4 target). **User / operator unsubscribe management** (subscribers or staff managing marketing opt-outs in PUMP) — **not in v1** (see § Send-time suppression vs user/operator unsubscribe). |
 | **Shared foundation**       | **pace-core2** — local path above until publish. Legacy: `**solvera/pace-core`**, `**@jmruthers/pace-core`**. Current app wiring consumes scoped entrypoints such as `**@solvera/pace-core/components`**, `**/providers`**, `**/hooks`**, and `**/rbac`**. Shared composer work consumes `**@solvera/pace-core/comms**` **after CR23 lands**.                                                                                                                                       |
 | **Slice requirements path** | `docs/requirements/pump/<PU><NN>-<brief-description>-requirements.md` (e.g. `PU07-send-pipeline-edge-requirements.md`; slice IDs **PUMP-01**–**PUMP-07** in doc metadata)                                                                                                                                       |
 | **DB verification**         | Supabase MCP **dev-db only** (required before **build**, not before **slice doc authoring**)                                                                                                                                                                                                                                   |
@@ -111,12 +111,12 @@ Updated **[CR23](~/Documents/GitHub/pace-core2/packages/core/docs/requirements/C
 
 **Decided (no further product debate in pace-pump):**
 
-- **CommsLog admins** with `**update:page.CommsLog`** are **not** constrained like draft authors — they **may** UPDATE any in-org row (including `**status`**) by design.
+- **comms-log admins** with `**update:page.comms-log`** are **not** constrained like draft authors — they **may** UPDATE any in-org row (including `**status`**) by design.
 - **Draft persistence:** keep **DB-404** NOT NULL targets; **PUMP-05** keeps draft state **local until first meaningful save**, then persists a draft row with the minimum required defaults (see **§ RBAC model**).
 - **Gateway types:** `**pump_gateway_config.gateway_type**` includes `**resend**` and `**twilio**` in v1.
-- **RBAC:** CR23 uses clean page RBAC for `**CommsLog**` and `**CommsTemplates**`.
+- **RBAC:** CR23 uses clean page RBAC for `**comms-log**` and `**comms-templates**`.
 - **Merge catalogue:** CR23 uses `**core_field_list.pump_merge_availability**`, not a PUMP-local merge table.
-- **Legacy `CreateComms`:** dev-db may still contain the old page key before p4 cleanup, but the rebuild ignores it and derives compose access from `**CommsLog**`.
+- **Legacy `CreateComms`:** dev-db may still contain the old page key before p4 cleanup, but the rebuild ignores it and derives compose access from `**comms-log**`.
 
 ### Pre-migration audit (historical — before DB-407)
 
@@ -146,7 +146,7 @@ Updated **[CR23](~/Documents/GitHub/pace-core2/packages/core/docs/requirements/C
 
 **RLS on `pump_comms_log` (audit)**
 
-- Policies use **page-scoped RBAC** (e.g. `**read:page.CommsLog`**, `**create:page.CommsLog`**, `**update:page.CommsLog**`, `**delete:page.CommsLog**`) with `check_rbac_permission_with_context`, not legacy product-only strings in SQL.
+- Policies use **page-scoped RBAC** (e.g. `**read:page.comms-log`**, `**create:page.comms-log`**, `**update:page.comms-log**`, `**delete:page.comms-log**`) with `check_rbac_permission_with_context`, not legacy product-only strings in SQL.
 - **Tenant isolation:** INSERT/UPDATE/SELECT scoped by `**organisation_id`** — cross-org leak **not** indicated.
 - **Gaps:** UPDATE is **not** limited to `status = 'draft' AND created_by = caller` — any user with org update rights can mutate **any** row; **no DB guard** stopping SPA from setting `status = 'sent'` without Edge. **Recommendation:** narrow UPDATE for SPA drafts + **enforce send/schedule transitions in Edge** (service role); align with PUMP-05/PUMP-06 contracts.
 
@@ -186,8 +186,8 @@ Updated **[CR23](~/Documents/GitHub/pace-core2/packages/core/docs/requirements/C
 | ----------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | **Platform shell**            | Legacy pace-core providers, layout, RBAC | pace-core2 auth, layout, **page RBAC** (**§ RBAC model**)                                                                                |
 | **Shared comms UI**           | *None in legacy*                         | `**@solvera/pace-core/comms`** — **CommComposer** stack                                                                                  |
-| **Log & analytics**           | List + JSON recipients, weak drill-down  | `**pump_message`** batches, `**pump_message_recipient`** detail, `**pump_delivery_event**`; `**read:page.CommsLog**`                     |
-| **Templates**                 | Slug-oriented CRUD                       | `**pump_organisation_templates`** (+ `**require_merge_field_validation`**, `**created_by**` per agreed contract); `**CommsTemplates`**   |
+| **Log & analytics**           | List + JSON recipients, weak drill-down  | `**pump_message`** batches, `**pump_message_recipient`** detail, `**pump_delivery_event**`; `**read:page.comms-log**`                     |
+| **Templates**                 | Slug-oriented CRUD                       | `**pump_organisation_templates`** (+ `**require_merge_field_validation`**, `**created_by**` per agreed contract); `**comms-templates`**   |
 | **Gateway + sender identity** | Mixed / ad hoc org fields               | **Platform** `**pump_gateway_config`** (credentials); **per-org** `**pump_org_settings`** + message sender fields for sender identity only; separate platform-managed branding source for the master email shell; no PUMP settings UI in v1       |
 | **Compose & send**            | Client-side send loops                   | **CommComposer** + adapter → `**pump-resolve-pool`**, `**pump-send`**, `**pump-schedule**`                                               |
 | **Webhooks & async delivery** | Partial / missing Edge coverage          | `**pump-webhook/{gateway}`** → recipients + `**pump_delivery_event`** (provider-agnostic ingress; **v1:** Resend + Twilio behind config) |
@@ -228,8 +228,9 @@ Updated **[CR23](~/Documents/GitHub/pace-core2/packages/core/docs/requirements/C
 
 | Page (context key)   | Typical actions                                                      | Slice / surface                                                                                          |
 | -------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `**CommsLog`**       | `**read**`, `**create**`, `**update**`, `**delete**` | `**/**` log, drill-down, `**pump_message**` INSERT (draft) / UPDATE; `**pump_message_recipient**` + `**pump_delivery_event**` SELECT (DB-409 / DB-410) |
-| `**CommsTemplates**` | `**read**`, `**create**`, `**update**`, `**delete**` | `**/comms/templates**` — `**pump_organisation_templates**` (DB-410)                                      |
+| `**comms-log`**       | `**read**`, `**create**`, `**update**`, `**delete**` | `**/**` log, drill-down, `**pump_message**` INSERT (draft) / UPDATE; `**pump_message_recipient**` + `**pump_delivery_event**` SELECT (DB-409 / DB-410) |
+| `**comms-templates**` | `**read**`, `**create**`, `**update**`, `**delete**` | `**/comms/templates**` — `**pump_organisation_templates**` (DB-410)                                      |
+| `**comms-settings**` | `**read**`, `**create**`, `**update**`, `**delete**` | Sender identity / communication settings (catalogue + grants seeded; **no v1 SPA route** — see PU03)     |
 
 
 `**CommRbacContext` (pace-core2 / PUMP-05)** — derive from **effective** page grants, e.g.:
@@ -237,27 +238,27 @@ Updated **[CR23](~/Documents/GitHub/pace-core2/packages/core/docs/requirements/C
 
 | Prop          | Suggested source (v1)                                                                 |
 | ------------- | ------------------------------------------------------------------------------------- |
-| `canCompose`  | `**create:page.CommsLog`**                                                            |
-| `canSend`     | `**update:page.CommsLog`** (send/schedule flows require elevated row mutation + Edge) |
-| `canSchedule` | `**update:page.CommsLog**`                                                            |
+| `canCompose`  | `**create:page.comms-log`**                                                            |
+| `canSend`     | `**update:page.comms-log`** (send/schedule flows require elevated row mutation + Edge) |
+| `canSchedule` | `**update:page.comms-log**`                                                            |
 
 
-**Legacy dev-db mismatch:** `**rbac_app_pages`** currently still includes `**CreateComms`**. The rebuild does **not** adopt that page key. Compose UX derives from `**CommsLog`** to stay aligned with pace-core2 and CR23.
+**Legacy dev-db mismatch:** `**rbac_app_pages`** currently still includes `**CreateComms`**. The rebuild does **not** adopt that page key. Compose UX derives from `**comms-log`** to stay aligned with pace-core2 and CR23.
 
 **Route access mapping (v1):**
 
-- `**/**` requires `**read:page.CommsLog`**.
-- `**/comms/create`** requires `**create:page.CommsLog`**.
-- `**/comms/templates`** requires `**read:page.CommsTemplates`**.
-- Send, schedule, and test-send actions on `**/comms/create`** require `**update:page.CommsLog`** through the existing pace-core2 RBAC model; do **not** add route-specific custom permission code.
+- `**/**` requires `**read:page.comms-log`**.
+- `**/comms/create`** requires `**create:page.comms-log`**.
+- `**/comms/templates`** requires `**read:page.comms-templates`**.
+- Send, schedule, and test-send actions on `**/comms/create`** require `**update:page.comms-log`** through the existing pace-core2 RBAC model; do **not** add route-specific custom permission code.
 
-**CommsLog admin UPDATE:** Users with `**update:page.CommsLog`** may UPDATE **any** in-org `**pump_message`** row (including `**status`**), unlike **draft-only** author policies — **intentional** for operators/admins.
+**comms-log admin UPDATE:** Users with `**update:page.comms-log`** may UPDATE **any** in-org `**pump_message`** row (including `**status`**), unlike **draft-only** author policies — **intentional** for operators/admins.
 
-**Cancel authorisation (v1):** `**pump-cancel`** is available for **scheduled** messages when the caller is in the same org **and** is either the original author (`**created_by`**) **or** holds `**update:page.CommsLog`**. This is **separate** from `**CommRbacContext`** unless pace-core2 later adds an explicit cancel boolean.
+**Cancel authorisation (v1):** `**pump-cancel`** is available for **scheduled** messages when the caller is in the same org **and** is either the original author (`**created_by`**) **or** holds `**update:page.comms-log`**. This is **separate** from `**CommRbacContext`** unless pace-core2 later adds an explicit cancel boolean.
 
-**Draft visibility (target):** At DB or app: visible `**draft`** rows = `**created_by = current user`** only; **all users** with `**read:page.CommsLog`** see **non-draft** org traffic. Implement via **split RLS SELECT policies** or equivalent (see handoff below).
+**Draft visibility (target):** At DB or app: visible `**draft`** rows = `**created_by = current user`** only; **all users** with `**read:page.comms-log`** see **non-draft** org traffic. Implement via **split RLS SELECT policies** or equivalent (see handoff below).
 
-**Draft removal (v1):** deleting a draft is a normal `**pump_message`** delete action governed by the existing `**delete:page.CommsLog`** page permission plus tenancy / author rules. It is **not** modelled as “cancel” or “discard draft”.
+**Draft removal (v1):** deleting a draft is a normal `**pump_message`** delete action governed by the existing `**delete:page.comms-log`** page permission plus tenancy / author rules. It is **not** modelled as “cancel” or “discard draft”.
 
 **Draft persistence (recommendation — `DB-404` NOT NULLs):** Keep `**body_text`**, `**sender_name`**, `**source_app**`, `**recipient_pool_descriptor**` NOT NULL. PUMP-05 keeps draft state **local until first meaningful save**. A meaningful save means the operator has selected a template, chosen recipients, or entered non-whitespace message content. At that point `**saveDraft**` persists the row with the minimum required defaults: `**body_text`** minimal placeholder if still empty, `**sender_name`** from the effective sender fallback chain, `**source_app**` `'pump'`, and `**recipient_pool_descriptor**` for the selected pool.
 
@@ -311,7 +312,7 @@ interface EffectivePumpSenderIdentity {
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Happy path**                    | One end-to-end success for the slice’s primary user action(s).                                                                                                              |
 | **Validation failure**            | One case where invalid input or preconditions produce a clear, user-visible outcome (no silent failure).                                                                    |
-| **Auth / permission failure**     | One case where **page RBAC** (e.g. missing `**read:page.CommsLog`**) or **wrong org** denies the action; **Edge** denial if the slice invokes Edge.                         |
+| **Auth / permission failure**     | One case where **page RBAC** (e.g. missing `**read:page.comms-log`**) or **wrong org** denies the action; **Edge** denial if the slice invokes Edge.                         |
 | **RLS / tenancy**                 | Where the slice reads/writes tenant data, at least one test or documented MCP check that **wrong org** cannot access rows (or cite Edge-only path with service role rules). |
 | **Unit tests**                    | Pure helpers (mappers, formatters, small state machines) introduced in the slice.                                                                                           |
 | **Integration / component tests** | Critical UI paths for the slice (tables, forms, composer wiring) where the repo already uses Vitest/RTL — **match existing patterns**.                                      |
@@ -331,9 +332,9 @@ interface EffectivePumpSenderIdentity {
 | Slice       | Focus                                                                                                                                     |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | **PUMP-01** | Shell renders; current pace-core2 scoped entrypoints resolve; auth + **page RBAC** wiring smoke test                                            |
-| **PUMP-02** | **A:** list + drill-down; `**read:page.CommsLog`** denied path; others’ **drafts** invisible. **B:** scheduled cancel + draft delete stay in log/detail |
+| **PUMP-02** | **A:** list + drill-down; `**read:page.comms-log`** denied path; others’ **drafts** invisible. **B:** scheduled cancel + draft delete stay in log/detail |
 | **PUMP-03** | Platform-managed sender identity resolution contract (**prerequisite only; no standalone build ticket**)                             |
-| **PUMP-04** | Template CRUD + `**require_merge_field_validation`** surfaced; `**CommsTemplates`** denied path                                          |
+| **PUMP-04** | Template CRUD + `**require_merge_field_validation`** surfaced; `**comms-templates`** denied path                                          |
 | **PUMP-05** | Adapter calls; `**pump-resolve-pool`** preview; `**pump-send`** / `**pump-send-test`** / `**pump-schedule**` success + warning payload; `**source_app: 'pump'**` |
 | **PUMP-06** | Webhook → `**pump_delivery_event`** + recipient status; replay / idempotency                                                              |
 
@@ -383,9 +384,9 @@ interface EffectivePumpSenderIdentity {
 | Slice ID    | Name                  | Bounded context(s)        | Routes owned                    | Depends on                | Summary                                                                                                                                                                                         |
 | ----------- | --------------------- | ------------------------- | ------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **PUMP-01** | App shell & IA        | Platform shell            | `/login`, `*` *(NotFound)*      | —                         | pace-core2 integration; **page RBAC** shell; **do not register `/comms`** (removed; log only on `**/**`)                                                                                        |
-| **PUMP-02** | Comms log & analytics | Log & analytics           | `**/`** *(home = log)*          | PUMP-01                   | **A:** `**pump_message*`* list, optional summary, recipient drill-down, `**read:page.CommsLog`** denied path, and **others’ drafts hidden**. **B:** scheduled cancel / draft delete row actions. **Compose** CTA remains on `/`. |
+| **PUMP-02** | Comms log & analytics | Log & analytics           | `**/`** *(home = log)*          | PUMP-01                   | **A:** `**pump_message*`* list, optional summary, recipient drill-down, `**read:page.comms-log`** denied path, and **others’ drafts hidden**. **B:** scheduled cancel / draft delete row actions. **Compose** CTA remains on `/`. |
 | **PUMP-03** | Platform-managed sender identity | Sender identity defaults  | *No PUMP route*                 | PUMP-01                   | Numbered **prerequisite contract only** for the shared effective-sender contract; **no standalone build ticket**; settings are **platform-managed** in v1 and **not** edited through PUMP                                                                             |
-| **PUMP-04** | Template library      | Templates                 | `/comms/templates`              | PUMP-01                   | `**pump_organisation_templates`** CRUD; `**CommsTemplates`**; strict-mode indicator via `**require_merge_field_validation`**                                                                  |
+| **PUMP-04** | Template library      | Templates                 | `/comms/templates`              | PUMP-01                   | `**pump_organisation_templates`** CRUD; `**comms-templates`**; strict-mode indicator via `**require_merge_field_validation`**                                                                  |
 | **PUMP-05** | Compose & send        | Shared comms UI + compose | `/comms/create`                 | PUMP-01, PUMP-03 prerequisite, PUMP-04 | **CommComposer**; **CommSendAdapter** (merge fields from **`core_field_list.pump_merge_availability`** through `**pump_list_merge_fields(...)`**); `**pump-resolve-pool`**, `**pump-send`**, `**pump-schedule`**, `**pump-send-test**`; `source_app: 'pump'` — **author in sub-passes** (see **Slice sizing**) |
 | **PUMP-06** | Webhooks & delivery   | Webhooks & async delivery | *Edge HTTP only (no SPA route)* | PUMP-05 *(behavioural)*   | `**pump-webhook/{gateway}`**; `**pump_delivery_event`**; recipient updates — **author in sub-passes** (see **Slice sizing**)                                                                    |
 

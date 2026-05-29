@@ -76,7 +76,7 @@ Auth: Bearer <user JWT>
 
 **Validation:**
 
-1. The caller must hold `read:page.CommsLog` for the supplied `organisation_id`. Failure returns `PUMP_RBAC_DENIED`.
+1. The caller must hold `read:page.comms-log` for the supplied `organisation_id`. Failure returns `PUMP_RBAC_DENIED`.
 2. The `pool` field must be one of the supported `RecipientPoolDescriptor` variants (`OrgMembersPool`, `EventParticipantsPool`, `ManualPool`). A `CustomFilterPool` variant returns `POOL_VARIANT_UNSUPPORTED` immediately without DB queries.
 3. For `EventParticipantsPool`, the `event_id` must be scoped to the caller's `organisation_id`. Failure returns `INVALID_SOURCE_CONTEXT`.
 
@@ -115,7 +115,7 @@ Key fields: `organisation_id`, `channel`, `body_text`, `subject?`, `body_html?`,
 
 1. `sender_name` non-empty; `sender_email` non-empty for email channel; `sender_phone` non-empty for SMS channel; `body_text` non-empty.
 2. Exactly one of `pool` or (`system_key` + `system_recipient`) present.
-3. RBAC: caller holds `update:page.CommsLog` for `organisation_id`. Failure returns `PUMP_RBAC_DENIED`.
+3. RBAC: caller holds `update:page.comms-log` for `organisation_id`. Failure returns `PUMP_RBAC_DENIED`.
 4. For `EventParticipantsPool` or system sends with `source_context_id`, validate the context is accessible to the caller's org scope. Failure returns `INVALID_SOURCE_CONTEXT`.
 5. Call `pump_get_effective_sender_identity(organisation_id, source_context_type, source_context_id)`; verify `canSendEmail` (email channel) or `canSendSms` (SMS channel) is true. Failure returns `INSUFFICIENT_SENDER_IDENTITY`.
 6. Read `pump_gateway_config WHERE channel = $channel AND is_active = true`. No active row returns `GATEWAY_CONFIG_MISSING`.
@@ -164,7 +164,7 @@ Auth: Bearer <user JWT>
 
 1. Reject requests that include `pool`, `system_key`, or `system_recipient` fields. Returns `PUMP_SEND_TEST_INVALID_INPUT`.
 2. `sender_name`, channel-specific sender field, `body_text` non-empty.
-3. RBAC: caller holds `update:page.CommsLog` for `organisation_id`. Failure returns `PUMP_RBAC_DENIED`.
+3. RBAC: caller holds `update:page.comms-log` for `organisation_id`. Failure returns `PUMP_RBAC_DENIED`.
 4. Resolve the caller's destination via `runtime.resolveCurrentUserDestination(channel)`: for email channel, the user's auth email; for SMS channel, the user's primary phone number from `core_member` / `core_phone`. If no destination exists for the channel, return `PUMP_SEND_TEST_NO_DESTINATION`.
 5. Suppression is bypassed: the Edge does not check `pump_suppression` for the caller's address. If the caller's address is in `pump_suppression`, the test send proceeds and an advisory `CommTokenWarning` with `type: 'unresolved_token'` and `message: "Your address is in the suppression registry; production sends would skip you."` is appended to the result.
 
@@ -205,7 +205,7 @@ n/a — Edge-only slice; no SPA route, no rendering surface, no pace-core2 UI co
 
 ### BR-ResolvePool — Pool resolution rules
 
-**BR-ResolvePool-RBAC** — Before any pool resolution, `pump-resolve-pool` verifies the caller holds `read:page.CommsLog` for the request's `organisation_id` via `runtime.hasPermission`. Failure returns `PUMP_RBAC_DENIED`. The RBAC check runs before any DB query.
+**BR-ResolvePool-RBAC** — Before any pool resolution, `pump-resolve-pool` verifies the caller holds `read:page.comms-log` for the request's `organisation_id` via `runtime.hasPermission`. Failure returns `PUMP_RBAC_DENIED`. The RBAC check runs before any DB query.
 
 **BR-ResolvePool-OrgMembers** — For `OrgMembersPool`, the concrete `resolvePoolRecipients` implementation queries `core_member WHERE organisation_id = $org` filtered by optional `member_type_ids` (IN clause), `unit_ids` (IN clause), and `include_inactive` (when false, excludes members that are not active). The query joins `core_person` to populate merge data. Additional contacts with `'full'` or `'notify'` access are auto-included per BR-ResolvePool-AdditionalContacts.
 
@@ -259,7 +259,7 @@ n/a — Edge-only slice; no SPA route, no rendering surface, no pace-core2 UI co
 
 ### BR-Send — pump-send orchestration rules
 
-**BR-Send-RBAC** — At Edge entry, `pump-send` verifies the caller holds `update:page.CommsLog` for `organisation_id` via `runtime.hasPermission`. Failure returns `PUMP_RBAC_DENIED`. No further processing runs on denial.
+**BR-Send-RBAC** — At Edge entry, `pump-send` verifies the caller holds `update:page.comms-log` for `organisation_id` via `runtime.hasPermission`. Failure returns `PUMP_RBAC_DENIED`. No further processing runs on denial.
 
 **BR-Send-SourceContextValidation** — When the request carries `source_context_id` (EventParticipantsPool or system send with source context), the Edge validates that the source context is accessible within the caller's org scope. Failure returns `INVALID_SOURCE_CONTEXT`.
 
@@ -285,7 +285,7 @@ n/a — Edge-only slice; no SPA route, no rendering surface, no pace-core2 UI co
 
 ### BR-SendTest — pump-send-test rules
 
-**BR-SendTest-RBAC** — `pump-send-test` verifies the caller holds `update:page.CommsLog` for `organisation_id`. Failure returns `PUMP_RBAC_DENIED`.
+**BR-SendTest-RBAC** — `pump-send-test` verifies the caller holds `update:page.comms-log` for `organisation_id`. Failure returns `PUMP_RBAC_DENIED`.
 
 **BR-SendTest-Destination** — The test destination is resolved exclusively from the signed-in user's data: for email channel, the user's `auth.users` email address; for SMS channel, the user's primary phone number from `core_member` joined to `core_phone`. When no address is available for the requested channel, the Edge returns `PUMP_SEND_TEST_NO_DESTINATION`.
 
@@ -360,7 +360,7 @@ n/a — Edge-only slice; no SPA route, no rendering surface, no pace-core2 UI co
 
 The following business rules are out of PUMP-07 v1 scope. They are documented here for the follow-up slice.
 
-**BR-Schedule-RBAC** — `pump-schedule` verifies the caller holds `update:page.CommsLog` for `organisation_id`. Failure returns `PUMP_RBAC_DENIED`. *(Deferred — no v1 implementation.)*
+**BR-Schedule-RBAC** — `pump-schedule` verifies the caller holds `update:page.comms-log` for `organisation_id`. Failure returns `PUMP_RBAC_DENIED`. *(Deferred — no v1 implementation.)*
 
 **BR-Schedule-FutureTime** — `scheduled_at` must be at least 5 minutes in the future relative to the Edge invocation time. Earlier values return `SCHEDULE_TIME_PAST`. *(Deferred.)*
 
@@ -368,7 +368,7 @@ The following business rules are out of PUMP-07 v1 scope. They are documented he
 
 **BR-Schedule-Status** — `pump-schedule` creates `pump_message` with `status = 'scheduled'` and `scheduled_at` populated. No gateway dispatch. Returns `CommScheduleResult { message_id }`. *(Deferred.)*
 
-**BR-Cancel-RBAC** — `pump-cancel` authorises via OR-rule: `isAuthor = (message.created_by === userId)` OR `isAdmin = hasPermission('update:page.CommsLog', organisationId)`. When neither is true, returns `PUMP_CANCEL_OWNER_MISMATCH` (caller has the permission but is not the author) or `PUMP_RBAC_DENIED` (caller lacks the permission entirely). Note: the `pumpCancel` helper in `edge-service.ts` currently uses AND semantics — this must be patched to OR before the follow-up slice ships (see §9.2 and §17). *(Deferred.)*
+**BR-Cancel-RBAC** — `pump-cancel` authorises via OR-rule: `isAuthor = (message.created_by === userId)` OR `isAdmin = hasPermission('update:page.comms-log', organisationId)`. When neither is true, returns `PUMP_CANCEL_OWNER_MISMATCH` (caller has the permission but is not the author) or `PUMP_RBAC_DENIED` (caller lacks the permission entirely). Note: the `pumpCancel` helper in `edge-service.ts` currently uses AND semantics — this must be patched to OR before the follow-up slice ships (see §9.2 and §17). *(Deferred.)*
 
 **BR-Cancel-StatusCheck** — `pump-cancel` validates `message.status === 'scheduled'`. Any other status returns `PUMP_CANCEL_INVALID_STATUS`. The status check runs after the authorisation check so that an unauthorised caller cannot learn the message's status. *(Deferred.)*
 
@@ -491,7 +491,7 @@ PUMP-07 writes to `pump_message` and `pump_message_recipient`. All other table a
 
 - **Relative path import for `edge-service.ts`.** The orchestration functions (`pumpResolvePool`, `pumpSend`, `pumpSendTest`) and the `PumpRuntime` / `PumpStore` / `PumpGateway` interfaces live in `edge-service.ts` as an internal module. PUMP-07's Edge functions import via relative path within the pace-core2 workspace (e.g. `../../src/comms/edge-service.ts`). This is the v1 approach — promote to a published package export as a platform follow-up (see §17).
 - **`PumpStoreCreateRecipientInput` extension required.** The type in `edge-service.ts` does not include `gatewayMessageId`. PUMP-07's concrete store implementation extends this type with `gatewayMessageId?: string` and writes it to `pump_message_recipient.gateway_message_id` when present. This extension is required for PUMP-06 webhook correlation and must be applied before implementing the `pump-send` store.
-- **`pumpCancel` AND-rule bug.** The `pumpCancel` function in `edge-service.ts` (line 572) checks `update:page.CommsLog` permission first, then checks `input.createdBy !== runtime.userId` — producing AND semantics. The architecture (line 256) requires OR semantics (author OR admin). The `pumpCancel` helper must be patched to OR-rule before the PUMP-07 follow-up slice ships `pump-cancel`. PUMP-07 v1 does not call `pumpCancel`, so this bug does not block v1 delivery.
+- **`pumpCancel` AND-rule bug.** The `pumpCancel` function in `edge-service.ts` (line 572) checks `update:page.comms-log` permission first, then checks `input.createdBy !== runtime.userId` — producing AND semantics. The architecture (line 256) requires OR semantics (author OR admin). The `pumpCancel` helper must be patched to OR-rule before the PUMP-07 follow-up slice ships `pump-cancel`. PUMP-07 v1 does not call `pumpCancel`, so this bug does not block v1 delivery.
 - **`CustomFilterPool` type guard only.** `isCustomFilterPool` is cited above because the Edge must detect and reject `CustomFilterPool` descriptors gracefully. The custom filter resolution logic itself is out of v1 scope.
 - **pump-send-test suppression advisory warning.** `pumpSendTest` in `edge-service.ts` does not call `runtime.isSuppressed()` — test-send suppression bypass is not implemented in the shared orchestration layer. The concrete `pump-send-test` Edge handler must: (1) resolve the caller's destination address before invoking `pumpSendTest`, (2) query `pump_suppression` for `(organisation_id, address, channel)` directly using the service-role client, (3) if a suppression row exists, invoke `pumpSendTest` normally (send proceeds), then merge an advisory `CommTokenWarning` into the returned `CommSendResult.warnings` before responding. The `CommTokenWarning` shape: `{ type: 'unresolved_token', count: 1, message: 'Your address is in the suppression registry; production sends would skip you.' }`. The `isSuppressed` runtime method is not used for this path.
 - **`pumpSend` / `pumpSendTest` gateway_message_id forwarding.** The `pumpSend` function in `edge-service.ts` does not currently forward the gateway-returned `gatewayMessageId` to `runtime.store.createRecipient()` on the success branch. Before PUMP-07B implementation begins, `pumpSend` (and `pumpSendTest`) must be patched in `edge-service.ts` to pass `gatewayMessageId` through to the store's `createRecipient` call. Without this patch, `pump_message_recipient.gateway_message_id` is NULL for every dispatched recipient and PUMP-06 webhook correlation fails entirely. This is a pre-implementation pace-core2 patch, not a PUMP-07 runtime concern.
@@ -503,7 +503,7 @@ PUMP-07 writes to `pump_message` and `pump_message_recipient`. All other table a
 ### §10A — pump-resolve-pool
 
 **AC-07A-01 — OrgMembersPool happy path.**
-Given an authenticated caller with `read:page.CommsLog` and a valid `OrgMembersPool` descriptor for a non-empty org, when `pump-resolve-pool` is called, then the response is `{ ok: true, data: CommRecipientPreview }` with `estimated_count > 0`, `sample_names` containing up to 5 first names, and `warnings` reflecting any no-address or suppressed-address conditions. Suppressed recipients are still counted in `estimated_count`. (Traces BR-ResolvePool-RBAC, BR-ResolvePool-OrgMembers, BR-ResolvePool-SuppressedWarnings.)
+Given an authenticated caller with `read:page.comms-log` and a valid `OrgMembersPool` descriptor for a non-empty org, when `pump-resolve-pool` is called, then the response is `{ ok: true, data: CommRecipientPreview }` with `estimated_count > 0`, `sample_names` containing up to 5 first names, and `warnings` reflecting any no-address or suppressed-address conditions. Suppressed recipients are still counted in `estimated_count`. (Traces BR-ResolvePool-RBAC, BR-ResolvePool-OrgMembers, BR-ResolvePool-SuppressedWarnings.)
 
 **AC-07A-02 — EventParticipantsPool with status filter.**
 Given a valid `EventParticipantsPool` with `filters.status = ['approved']` for an event with known participant counts, when `pump-resolve-pool` is called, then `estimated_count` matches only participants whose status is `'approved'`, not the total registration count. (Traces BR-ResolvePool-EventParticipants.)
@@ -518,14 +518,14 @@ Given a `ManualPool` with one `member_id` not in the org, when `pump-resolve-poo
 Given a `CustomFilterPool` descriptor, when `pump-resolve-pool` is called, then the response is `{ ok: false, error: { code: 'POOL_VARIANT_UNSUPPORTED' } }` with no DB queries executed. (Traces BR-ResolvePool-CustomFilter.)
 
 **AC-07A-06 — RBAC denied.**
-Given an authenticated caller without `read:page.CommsLog`, when `pump-resolve-pool` is called, then the response is `{ ok: false, error: { code: 'PUMP_RBAC_DENIED' } }`. (Traces BR-ResolvePool-RBAC.)
+Given an authenticated caller without `read:page.comms-log`, when `pump-resolve-pool` is called, then the response is `{ ok: false, error: { code: 'PUMP_RBAC_DENIED' } }`. (Traces BR-ResolvePool-RBAC.)
 
 ---
 
 ### §10B — pump-send
 
 **AC-07B-01 — Happy path OrgMembersPool send.**
-Given a valid `CommSendRequest` with `OrgMembersPool`, an authenticated caller with `update:page.CommsLog`, active gateway config, and sufficient sender identity, when `pump-send` is called, then: one `pump_message` row is inserted with `status = 'sending'` transitioning to `'sent'`; one `pump_message_recipient` row is inserted per resolved recipient; `gateway_message_id` is populated on each recipient row after gateway ACK; `CommSendResult.total_recipients` equals the resolved count. (Traces BR-Send-RBAC, BR-Send-SenderIdentity, BR-Send-MessageStatus, BR-Send-RecipientInsert, BR-Send-GatewayWriteback.)
+Given a valid `CommSendRequest` with `OrgMembersPool`, an authenticated caller with `update:page.comms-log`, active gateway config, and sufficient sender identity, when `pump-send` is called, then: one `pump_message` row is inserted with `status = 'sending'` transitioning to `'sent'`; one `pump_message_recipient` row is inserted per resolved recipient; `gateway_message_id` is populated on each recipient row after gateway ACK; `CommSendResult.total_recipients` equals the resolved count. (Traces BR-Send-RBAC, BR-Send-SenderIdentity, BR-Send-MessageStatus, BR-Send-RecipientInsert, BR-Send-GatewayWriteback.)
 
 **AC-07B-02 — Suppression skip.**
 Given one recipient whose address is in `pump_suppression` for the org/channel, when `pump-send` is called with `bypass_suppression` omitted, then that recipient's `pump_message_recipient.status = 'suppression_skipped'`; no gateway dispatch occurs for that recipient; `CommSendResult.suppression_skipped = 1`; the remaining recipients are dispatched normally. (Traces BR-Send-SuppressedSkip.)
@@ -544,7 +544,7 @@ Given a template with `require_merge_field_validation = true` and a request body
 ### §10C — pump-send-test
 
 **AC-07C-01 — Happy path.**
-Given an authenticated caller with `update:page.CommsLog`, an email address on their account, and an active Resend gateway config, when `pump-send-test` is called, then the test email is dispatched; `CommSendResult.total_recipients = 1`; `pump_message_recipient.gateway_message_id` is populated. (Traces BR-SendTest-RBAC, BR-SendTest-Destination, BR-SendTest-SingleRecipient.)
+Given an authenticated caller with `update:page.comms-log`, an email address on their account, and an active Resend gateway config, when `pump-send-test` is called, then the test email is dispatched; `CommSendResult.total_recipients = 1`; `pump_message_recipient.gateway_message_id` is populated. (Traces BR-SendTest-RBAC, BR-SendTest-Destination, BR-SendTest-SingleRecipient.)
 
 **AC-07C-02 — Suppressed caller address still delivers.**
 Given the caller's email address is in `pump_suppression`, when `pump-send-test` is called, then the test send proceeds; `CommSendResult.warnings` contains an advisory `CommTokenWarning` with `type: 'unresolved_token'` and `message` referencing the suppression registry. (Traces BR-SendTest-BypassSuppression.)
@@ -553,7 +553,7 @@ Given the caller's email address is in `pump_suppression`, when `pump-send-test`
 Given the caller has no phone number for the SMS channel, when `pump-send-test` is called with `channel: 'sms'`, then the response is `{ ok: false, error: { code: 'PUMP_SEND_TEST_NO_DESTINATION' } }`. (Traces BR-SendTest-Destination.)
 
 **AC-07C-04 — RBAC denied.**
-Given an authenticated caller without `update:page.CommsLog`, when `pump-send-test` is called, then the response is `{ ok: false, error: { code: 'PUMP_RBAC_DENIED' } }`. (Traces BR-SendTest-RBAC.)
+Given an authenticated caller without `update:page.comms-log`, when `pump-send-test` is called, then the response is `{ ok: false, error: { code: 'PUMP_RBAC_DENIED' } }`. (Traces BR-SendTest-RBAC.)
 
 ---
 
@@ -563,7 +563,7 @@ Given an authenticated caller without `update:page.CommsLog`, when `pump-send-te
 
 1. Per-pool-variant happy-path contract tests for `OrgMembersPool`, `EventParticipantsPool`, `ManualPool` — assert `estimated_count`, `sample_names` length, and warning types.
 2. `CustomFilterPool` returns `POOL_VARIANT_UNSUPPORTED` with zero DB queries.
-3. RBAC denial test — caller without `read:page.CommsLog` receives `PUMP_RBAC_DENIED`.
+3. RBAC denial test — caller without `read:page.comms-log` receives `PUMP_RBAC_DENIED`.
 4. `EventParticipantsPool` with an `event_id` outside the caller's org scope returns `INVALID_SOURCE_CONTEXT`.
 5. Additional contact auto-inclusion test — seed an org member with an additional contact at `'full'` access; assert the contact appears in `estimated_count`.
 6. Suppressed warning test — seed a suppression row for one member's address; assert `CommPoolWarning { type: 'suppressed', count: 1 }` in the preview and the member is still in `estimated_count`.

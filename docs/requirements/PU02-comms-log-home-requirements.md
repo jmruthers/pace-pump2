@@ -45,7 +45,7 @@ Give an operator a single, focused surface to see what their organisation has se
 
 This slice does **not** own:
 
-- The `<PagePermissionGuard pageName="CommsLog" operation="read">` mount on `/`. PUMP-01 owns the route guard.
+- The `<PagePermissionGuard pageName="comms-log" operation="read">` mount on `/`. PUMP-01 owns the route guard.
 - The `<ToastProvider>` mount. PUMP-01's `<AuthenticatedShell>` mounts it; PUMP-02 imports `toast` module-level for fire-and-forget notifications.
 - The `<CommRbacContextProvider>` mount. PUMP-01 mounts the provider app-locally inside `<AuthenticatedShell>` (pace-core2 publishes only the `CommRbacContext` type today, not the runtime provider/hook); PUMP-02 consumes `useCommRbacContext()` from the local provider.
 - Compose / send. PUMP-05 owns `/comms/create`. PUMP-02 only renders a "New message" CTA that links there.
@@ -58,19 +58,19 @@ This slice does **not** own:
 ### Architectural posture
 
 - **Read pattern.** Direct `SELECT` from `pump_message` filtered by `organisation_id = selectedOrganisation.id`, executed through `useSecureSupabase()` and TanStack Query in the server-side mode wired into pace-core2 `DataTable`. Draft visibility is enforced by the live RLS split on `pump_message` (`rbac_select_nondraft_pump_message` + `rbac_select_own_drafts_pump_message`); the SPA does NOT add any `created_by` / `status` predicate of its own. The slice does NOT call `pump_comms_log` (legacy reporting view; superseded for v6).
-- **Drill-down read pattern.** When a `?message=<id>` is in scope, the slice issues two additional queries through `useSecureSupabase()`: a `SELECT` from `pump_message_recipient` filtered by `message_id`, and a `SELECT` from `pump_delivery_event` joined through `recipient_id`. Both are gated by RLS on `read:page.CommsLog`.
+- **Drill-down read pattern.** When a `?message=<id>` is in scope, the slice issues two additional queries through `useSecureSupabase()`: a `SELECT` from `pump_message_recipient` filtered by `message_id`, and a `SELECT` from `pump_delivery_event` joined through `recipient_id`. Both are gated by RLS on `read:page.comms-log`.
 - **Cancel mutation pattern.** `secureSupabase.functions.invoke('pump-cancel', { body: { messageId, organisationId } })`. The Edge function returns `ApiResult<{ message_id: string }>`. On success the SPA invalidates the list query and refetches; on failure the SPA surfaces the Edge `error.message` in a destructive toast.
-- **Delete mutation pattern.** Direct `DELETE FROM pump_message WHERE id = $1 AND status = 'draft' AND created_by = auth.uid()` through `useSecureSupabase()`. RLS gate `rbac_delete_pump_message` (`delete:page.CommsLog`) is the platform check; the SPA-side `created_by` predicate is the v1 own-drafts-only restriction (per §6 BR-DeleteVisibility).
+- **Delete mutation pattern.** Direct `DELETE FROM pump_message WHERE id = $1 AND status = 'draft' AND created_by = auth.uid()` through `useSecureSupabase()`. RLS gate `rbac_delete_pump_message` (`delete:page.comms-log`) is the platform check; the SPA-side `created_by` predicate is the v1 own-drafts-only restriction (per §6 BR-DeleteVisibility).
 - **Toaster.** `toast` is imported module-level from `@solvera/pace-core/components`. Variants in v1 are `'default' | 'destructive' | 'success'` only — no `'warning'`, no `'info'`.
-- **Page-guard ownership boundary.** PUMP-01 mounts `<PagePermissionGuard pageName="CommsLog" operation="read">` on `/`. PUMP-02 does NOT re-mount the guard. Operators without `read:page.CommsLog` see PUMP-01's `<AccessDenied />` surface before any PUMP-02 content renders.
-- **`useCommRbacContext` consumption.** The Compose CTA gate reads `useCommRbacContext().canCompose` (the boolean PUMP-01 derives from `create:page.CommsLog`). The hook is imported from PUMP-01's local provider at `src/comms/CommRbacContextProvider.tsx`; if pace-core2 later publishes the runtime provider/hook, PUMP-01's local fallback is retired without changes to PUMP-02's import shape.
+- **Page-guard ownership boundary.** PUMP-01 mounts `<PagePermissionGuard pageName="comms-log" operation="read">` on `/`. PUMP-02 does NOT re-mount the guard. Operators without `read:page.comms-log` see PUMP-01's `<AccessDenied />` surface before any PUMP-02 content renders.
+- **`useCommRbacContext` consumption.** The Compose CTA gate reads `useCommRbacContext().canCompose` (the boolean PUMP-01 derives from `create:page.comms-log`). The hook is imported from PUMP-01's local provider at `src/comms/CommRbacContextProvider.tsx`; if pace-core2 later publishes the runtime provider/hook, PUMP-01's local fallback is retired without changes to PUMP-02's import shape.
 
 ### Page-level guards and evaluation ordering
 
-The route `/` has both PUMP-01's page-level guard (`<PagePermissionGuard pageName="CommsLog" operation="read">`) and PUMP-02's data-state empty / error / loading states. They are not in conflict — the empty / error / loading states are data-state, not context-state. Evaluation order on `/`:
+The route `/` has both PUMP-01's page-level guard (`<PagePermissionGuard pageName="comms-log" operation="read">`) and PUMP-02's data-state empty / error / loading states. They are not in conflict — the empty / error / loading states are data-state, not context-state. Evaluation order on `/`:
 
 1. **Session restoration → authentication → no-organisation** are owned by PUMP-01's wrapper chain (`<ProtectedRoute>` → `<SessionRestorationLoader>` → `<AuthenticatedShell>`). When `selectedOrganisation === null`, PUMP-01's no-organisation empty state renders inside the chrome and PUMP-02's content does not mount. PUMP-02 does not render its own no-organisation state.
-2. **`PagePermissionGuard`** (PUMP-01) evaluates `read:page.CommsLog` against the active scope (organisation-scoped). Scope is resolved by the guard internally from `<OrganisationServiceProvider>`; PUMP-01 does not pass a `scope` prop. While `useCan`'s `isLoading` is true, the guard renders `null` (its loading default; PUMP-01 does not pass a `loading` prop). On denied → `<AccessDenied />`. On allowed → PUMP-02's content mounts.
+2. **`PagePermissionGuard`** (PUMP-01) evaluates `read:page.comms-log` against the active scope (organisation-scoped). Scope is resolved by the guard internally from `<OrganisationServiceProvider>`; PUMP-01 does not pass a `scope` prop. While `useCan`'s `isLoading` is true, the guard renders `null` (its loading default; PUMP-01 does not pass a `loading` prop). On denied → `<AccessDenied />`. On allowed → PUMP-02's content mounts.
 3. **Inside the route content**, PUMP-02 mounts the list query. The loading / error / empty states render only after the guard has admitted the user.
 
 **Scope passed to the guard** is `{ organisationId: selectedOrganisation.id }`. The guard is invoked only after PUMP-01's shell guarantees `selectedOrganisation.id` is non-null, so the guard never sees an undefined `organisationId`. If the underlying scope were ever undefined, the RBAC RPC would treat the scope as missing and return `false`, and the guard would render `<AccessDenied />` — but this code path is unreachable in PUMP because of the upstream shell gate.
@@ -81,7 +81,7 @@ The route `/` has both PUMP-01's page-level guard (`<PagePermissionGuard pageNam
 
 ### Page entry (A + B)
 
-1. The route `/` renders inside PUMP-01's authenticated shell and page guard. Operators with `read:page.CommsLog` for the active organisation reach PUMP-02's content; operators without it see PUMP-01's `<AccessDenied />`.
+1. The route `/` renders inside PUMP-01's authenticated shell and page guard. Operators with `read:page.comms-log` for the active organisation reach PUMP-02's content; operators without it see PUMP-01's `<AccessDenied />`.
 2. On entry, the page renders three regions stacked top-to-bottom: the header row (page heading "Communications", description "View and manage your sent and scheduled messages.", and a primary "New message" button on the right when `canCompose` resolves true); the filter toolbar (Channel select, Status multi-select, Date-range picker pair, Refresh icon button); and the `DataTable`.
 3. On entry, the slice reads URL query state to seed initial filters, sort, page, and drill-down state. Recognised params: `channel`, `status`, `from`, `to`, `pageIndex`, `pageSize`, `sortDir`, `message`.
 4. On entry, the slice issues the list query with the seeded filters, ordering on `(sent_at NULLS LAST, created_at, id)` DESC by default, and asks for `pageSize` (default 25) rows starting at `pageIndex × pageSize`. The query runs through `useSecureSupabase()` against `pump_message` with `organisation_id = selectedOrganisation.id`.
@@ -140,8 +140,8 @@ The route `/` has both PUMP-01's page-level guard (`<PagePermissionGuard pageNam
 
 37. The "New message" header CTA renders only when `useCommRbacContext().canCompose` is true. When false, the CTA is omitted; the heading and description remain.
 38. The empty-state "Compose" button (§4 item 9) follows the same gate.
-39. The Cancel row action (PUMP-02B) renders in a row's Actions column only when the row's `status === 'scheduled'` AND the caller is in the same organisation AND (caller is `created_by` OR caller holds `update:page.CommsLog`). The author check uses `user.id === row.created_by`; the admin check uses `useCan('update:page.CommsLog', { organisationId })`.
-40. The Delete row action (PUMP-02B) renders in a row's Actions column only when the row's `status === 'draft'` AND `user.id === row.created_by` AND `useCan('delete:page.CommsLog', { organisationId })` resolves true. Admins (`update:page.CommsLog` + `delete:page.CommsLog`) do not see Delete on others' drafts in v1; the SELECT split makes those rows invisible to admins anyway, so the SPA-side restriction does not introduce a new gate.
+39. The Cancel row action (PUMP-02B) renders in a row's Actions column only when the row's `status === 'scheduled'` AND the caller is in the same organisation AND (caller is `created_by` OR caller holds `update:page.comms-log`). The author check uses `user.id === row.created_by`; the admin check uses `useCan('update:page.comms-log', { organisationId })`.
+40. The Delete row action (PUMP-02B) renders in a row's Actions column only when the row's `status === 'draft'` AND `user.id === row.created_by` AND `useCan('delete:page.comms-log', { organisationId })` resolves true. Admins (`update:page.comms-log` + `delete:page.comms-log`) do not see Delete on others' drafts in v1; the SELECT split makes those rows invisible to admins anyway, so the SPA-side restriction does not introduce a new gate.
 
 ### Navigation (A)
 
@@ -214,7 +214,7 @@ There are no sidebars, no sub-tabs, no sticky scroll regions in PUMP-02's conten
 
 #### DataTable
 
-- **`DataTable<MessageRow>`** from `@solvera/pace-core/components`. Configured with `rbac={{ pageName: 'CommsLog' }}`, `serverSide={{ fetchData, enableServerSorting: true }}`, `initialPageSize={25}`, `getRowId={(row) => row.id}`, `isLoading` bound to the list query's `isLoading`, `actions={[...]}` per PUMP-02B (empty array in PUMP-02A), `columns` per the six-column spec below. The DataTable's built-in Search, Filter, Create, Export, Import features are disabled — PUMP-02 owns the toolbar.
+- **`DataTable<MessageRow>`** from `@solvera/pace-core/components`. Configured with `rbac={{ pageName: 'comms-log' }}`, `serverSide={{ fetchData, enableServerSorting: true }}`, `initialPageSize={25}`, `getRowId={(row) => row.id}`, `isLoading` bound to the list query's `isLoading`, `actions={[...]}` per PUMP-02B (empty array in PUMP-02A), `columns` per the six-column spec below. The DataTable's built-in Search, Filter, Create, Export, Import features are disabled — PUMP-02 owns the toolbar.
 - **Columns (six total).**
   - **Channel** — header copy "Channel". Width: ~110 px. Cell renders `<Badge variant="solid-sec-muted">{icon}{label}</Badge>` where icon is `<Mail />` for email or `<Phone />` for sms, and label is "Email" or "SMS". Not sortable.
   - **Subject preview** — header copy "Subject". Width: flex (largest column). Cell renders two lines stacked: line 1 (`text-sm font-medium`) shows the row's `subject` for email or the literal "SMS message" for sms; line 2 (`text-xs text-secondary truncate`) shows the first 80 characters of `body_text` with ellipsis when longer. On the mobile breakpoint line 2 is hidden. Not sortable.
@@ -283,7 +283,7 @@ There are no sidebars, no sub-tabs, no sticky scroll regions in PUMP-02's conten
 
 | Permission state | Compose CTA (header) | Compose CTA (empty state) | Cancel row action | Delete row action |
 |---|---|---|---|---|
-| No `read:page.CommsLog` | n/a (PUMP-01's `<AccessDenied />` renders instead) | n/a | n/a | n/a |
+| No `read:page.comms-log` | n/a (PUMP-01's `<AccessDenied />` renders instead) | n/a | n/a | n/a |
 | `read` only | Hidden | Hidden | Hidden on every row | Hidden on every row |
 | `read` + `create` (`canCompose = true`) | Visible | Visible | Hidden on every row | Hidden on every row |
 | `read` + `update` | Hidden | Hidden | Visible on `scheduled` rows where caller is in same org (author or admin) | Hidden on every row |
@@ -304,7 +304,7 @@ Every list query passes `organisation_id = selectedOrganisation.id` as a `.eq()`
 
 #### BR-DraftVisibility — split RLS enforces draft visibility, not the SPA
 
-Draft visibility is enforced by the dev-db RLS split on `pump_message`: `rbac_select_nondraft_pump_message` admits all in-org rows where `status ≠ 'draft'` to anyone with `read:page.CommsLog`; `rbac_select_own_drafts_pump_message` admits rows where `status = 'draft' AND created_by = effective_user` to anyone with `read:page.CommsLog`. The SPA does NOT add `created_by = auth.uid() OR status != 'draft'` predicates of its own. Doing so would silently constrain admin reads inconsistently with the live policy semantics.
+Draft visibility is enforced by the dev-db RLS split on `pump_message`: `rbac_select_nondraft_pump_message` admits all in-org rows where `status ≠ 'draft'` to anyone with `read:page.comms-log`; `rbac_select_own_drafts_pump_message` admits rows where `status = 'draft' AND created_by = effective_user` to anyone with `read:page.comms-log`. The SPA does NOT add `created_by = auth.uid() OR status != 'draft'` predicates of its own. Doing so would silently constrain admin reads inconsistently with the live policy semantics.
 
 #### BR-InitialSort — list ordering
 
@@ -389,7 +389,7 @@ When the list query succeeds with zero rows under the active filters, the table 
 
 #### BR-ComposeCTA — Compose CTA gate
 
-The header-row "New message" `Button` and the empty-state "Compose" `Button` are gated by `useCommRbacContext().canCompose`. The provider PUMP-01 mounts derives this boolean from `useCan('create:page.CommsLog', { organisationId })`. Both buttons navigate to `/comms/create` when clicked.
+The header-row "New message" `Button` and the empty-state "Compose" `Button` are gated by `useCommRbacContext().canCompose`. The provider PUMP-01 mounts derives this boolean from `useCan('create:page.comms-log', { organisationId })`. Both buttons navigate to `/comms/create` when clicked.
 
 #### BR-DrillDownTrigger — row click opens drill-down
 
@@ -442,9 +442,9 @@ The Cancel row action is shown when:
 
 - the row's `status === 'scheduled'` AND
 - the row's `organisation_id === selectedOrganisation.id` (always true under RLS) AND
-- one of: `user.id === row.created_by` (caller authored the message) **OR** `useCan('update:page.CommsLog', { organisationId })` resolves true (caller is an admin).
+- one of: `user.id === row.created_by` (caller authored the message) **OR** `useCan('update:page.comms-log', { organisationId })` resolves true (caller is an admin).
 
-The OR rule mirrors the architecture's "caller is `created_by` OR holds `update:page.CommsLog`" framing.
+The OR rule mirrors the architecture's "caller is `created_by` OR holds `update:page.comms-log`" framing.
 
 #### BR-CancelAuthorisation — Edge enforces the same OR rule
 
@@ -498,9 +498,9 @@ The Delete row action is shown when, and only when:
 
 - the row's `status === 'draft'` AND
 - `user.id === row.created_by` (caller is the draft's author) AND
-- `useCan('delete:page.CommsLog', { organisationId })` resolves true.
+- `useCan('delete:page.comms-log', { organisationId })` resolves true.
 
-Admins (`update:page.CommsLog` plus `delete:page.CommsLog`) do NOT see Delete on others' drafts in v1. The dev-db RLS policy `rbac_delete_pump_message` is permissive on the author dimension (admins could delete by direct DML), but the SELECT split makes others' drafts invisible to admins anyway, so the SPA-side restriction does not introduce a new gate; it just makes the UX honest.
+Admins (`update:page.comms-log` plus `delete:page.comms-log`) do NOT see Delete on others' drafts in v1. The dev-db RLS policy `rbac_delete_pump_message` is permissive on the author dimension (admins could delete by direct DML), but the SELECT split makes others' drafts invisible to admins anyway, so the SPA-side restriction does not introduce a new gate; it just makes the UX honest.
 
 #### BR-DeleteIsDelete — Delete is a real DELETE
 
@@ -514,7 +514,7 @@ WHERE id = $1
 RETURNING id
 ```
 
-through `useSecureSupabase()`. RLS gate `rbac_delete_pump_message` (`delete:page.CommsLog`) is the platform authorisation; the SPA-side `status` and `created_by` predicates are the v1 own-drafts-only restriction. The slice does NOT introduce a "discard draft" or "cancel draft" workflow as an alternative — Delete is a real DELETE.
+through `useSecureSupabase()`. RLS gate `rbac_delete_pump_message` (`delete:page.comms-log`) is the platform authorisation; the SPA-side `status` and `created_by` predicates are the v1 own-drafts-only restriction. The slice does NOT introduce a "discard draft" or "cancel draft" workflow as an alternative — Delete is a real DELETE.
 
 #### BR-DeleteConfirm — Delete requires a confirmation dialog
 
@@ -559,13 +559,13 @@ PUMP-02 publishes no cross-slice TypeScript exports. Other slices do not consume
 - **List query.** Direct `SELECT id, organisation_id, channel, subject, body_text, status, scheduled_at, sent_at, source_app, total_recipients, created_by, created_at FROM pump_message WHERE organisation_id = $1 [filter predicates] ORDER BY (sent_at NULLS LAST, created_at, id) [sortDir] LIMIT $2 OFFSET $3`. Filter predicates: optional `channel = $`, optional `status IN (...)`, optional `coalesce(sent_at, scheduled_at, created_at) BETWEEN $from AND $to`. Run through `useSecureSupabase()`. RLS gate: split SELECT policies on `pump_message`.
 - **List count.** Parallel `SELECT count(*) FROM pump_message WHERE organisation_id = $1 [filter predicates]` (issued via Supabase client `.select('id', { count: 'exact', head: true })`) for total-row count rendered in pagination footer.
 - **Drill-down message fetch.** Direct `SELECT * FROM pump_message WHERE id = $1` to populate the dialog header. RLS gate: same SELECT policies as the list query.
-- **Drill-down recipients.** Direct `SELECT id, message_id, member_id, address, status, delivered_at, opened_at, clicked_at, failed_at, failure_reason FROM pump_message_recipient WHERE message_id = $1 ORDER BY address ASC`, joined to `core_member` for `full_name` (left join on `member_id`). RLS gate: `rbac_select_pump_message_recipient` (`read:page.CommsLog`).
-- **Drill-down delivery events.** Direct `SELECT id, recipient_id, event_type, gateway, occurred_at, raw_payload FROM pump_delivery_event WHERE recipient_id IN (SELECT id FROM pump_message_recipient WHERE message_id = $1) ORDER BY occurred_at ASC`. RLS gate: `rbac_select_pump_delivery_event` (joined through recipient → `read:page.CommsLog`).
+- **Drill-down recipients.** Direct `SELECT id, message_id, member_id, address, status, delivered_at, opened_at, clicked_at, failed_at, failure_reason FROM pump_message_recipient WHERE message_id = $1 ORDER BY address ASC`, joined to `core_member` for `full_name` (left join on `member_id`). RLS gate: `rbac_select_pump_message_recipient` (`read:page.comms-log`).
+- **Drill-down delivery events.** Direct `SELECT id, recipient_id, event_type, gateway, occurred_at, raw_payload FROM pump_delivery_event WHERE recipient_id IN (SELECT id FROM pump_message_recipient WHERE message_id = $1) ORDER BY occurred_at ASC`. RLS gate: `rbac_select_pump_delivery_event` (joined through recipient → `read:page.comms-log`).
 
 ### Write contract
 
-- **Cancel scheduled (B).** Edge invocation `pump-cancel`. Request body: `{ messageId: uuid, organisationId: uuid }`. Response: `ApiResult<{ message_id: string }>` — success returns `{ ok: true, data: { message_id } }`; failure returns `{ ok: false, error: { code, message } }` with `error.code` ∈ `{ 'PUMP_CANCEL_INVALID_STATUS', 'PUMP_RBAC_DENIED', 'PUMP_CANCEL_OWNER_MISMATCH', 'PUMP_CANCEL_FAILED' }`. Edge enforcement applies the OR rule — caller in same org AND (caller is `created_by` OR caller has `update:page.CommsLog`).
-- **Delete own draft (B).** Direct `DELETE FROM pump_message WHERE id = $1 AND status = 'draft' AND created_by = auth.uid() RETURNING id`. Returns 1 row on success, 0 rows on benign race. RLS gate: `rbac_delete_pump_message` (`delete:page.CommsLog`).
+- **Cancel scheduled (B).** Edge invocation `pump-cancel`. Request body: `{ messageId: uuid, organisationId: uuid }`. Response: `ApiResult<{ message_id: string }>` — success returns `{ ok: true, data: { message_id } }`; failure returns `{ ok: false, error: { code, message } }` with `error.code` ∈ `{ 'PUMP_CANCEL_INVALID_STATUS', 'PUMP_RBAC_DENIED', 'PUMP_CANCEL_OWNER_MISMATCH', 'PUMP_CANCEL_FAILED' }`. Edge enforcement applies the OR rule — caller in same org AND (caller is `created_by` OR caller has `update:page.comms-log`).
+- **Delete own draft (B).** Direct `DELETE FROM pump_message WHERE id = $1 AND status = 'draft' AND created_by = auth.uid() RETURNING id`. Returns 1 row on success, 0 rows on benign race. RLS gate: `rbac_delete_pump_message` (`delete:page.comms-log`).
 
 PUMP-02 issues no UPDATE statements against `pump_message`. Compose / send-time updates belong to PUMP-05; status flips during sending are owned by the Edge functions in PUMP-05 and PUMP-06.
 
@@ -573,14 +573,14 @@ PUMP-02 issues no UPDATE statements against `pump_message`. Compose / send-time 
 
 | Table / function | Operation | Policy / authorisation | Required RBAC |
 |---|---|---|---|
-| `pump_message` | SELECT (non-draft) | `rbac_select_nondraft_pump_message` | `read:page.CommsLog` |
-| `pump_message` | SELECT (own drafts) | `rbac_select_own_drafts_pump_message` | `read:page.CommsLog` AND `created_by = effective_user_id` |
-| `pump_message` | DELETE | `rbac_delete_pump_message` | `delete:page.CommsLog` |
-| `pump_message_recipient` | SELECT | `rbac_select_pump_message_recipient` | `read:page.CommsLog` |
-| `pump_delivery_event` | SELECT | `rbac_select_pump_delivery_event` | `read:page.CommsLog` (via recipient join) |
-| `pump-cancel` Edge | INVOKE | Edge-internal authorisation | same-org AND (`created_by` OR `update:page.CommsLog`) |
+| `pump_message` | SELECT (non-draft) | `rbac_select_nondraft_pump_message` | `read:page.comms-log` |
+| `pump_message` | SELECT (own drafts) | `rbac_select_own_drafts_pump_message` | `read:page.comms-log` AND `created_by = effective_user_id` |
+| `pump_message` | DELETE | `rbac_delete_pump_message` | `delete:page.comms-log` |
+| `pump_message_recipient` | SELECT | `rbac_select_pump_message_recipient` | `read:page.comms-log` |
+| `pump_delivery_event` | SELECT | `rbac_select_pump_delivery_event` | `read:page.comms-log` (via recipient join) |
+| `pump-cancel` Edge | INVOKE | Edge-internal authorisation | same-org AND (`created_by` OR `update:page.comms-log`) |
 
-All RLS policies resolve via `check_rbac_permission_with_context(<op>, 'CommsLog', organisation_id, NULL::text, get_app_id('PUMP'))`.
+All RLS policies resolve via `check_rbac_permission_with_context(<op>, 'comms-log', organisation_id, NULL::text, get_app_id('PUMP'))`.
 
 ### URL contract
 
@@ -643,7 +643,7 @@ Verify against project `rkytnffgmwnnmewevqgp` (per global operating rules → De
 2. The seven RLS policies on `pump_message` (`service_role_*`, `rbac_select_nondraft_*`, `rbac_select_own_drafts_*`, `rbac_insert_*`, `rbac_draft_owner_update_*`, `rbac_update_*`, `rbac_delete_*`) are present and resolve via `check_rbac_permission_with_context`.
 3. `pump_message_recipient` exists with the column shape in platform-snapshot-2026-05-07 lines 63–82, including `delivered_at`, `opened_at`, `clicked_at`, `failed_at`, `failure_reason`, and the `pump_recipient_status` enum has six values (no `opened`/`clicked`).
 4. `pump_delivery_event` exists with the column shape in platform-snapshot-2026-05-07 lines 84–98, including the unique `(gateway, dedupe_key)` index.
-5. The `CommsLog` page is registered in `rbac_app_pages` for the PUMP app.
+5. The `comms-log` page is registered in `rbac_app_pages` for the PUMP app.
 6. The `pump_message_status` enum has six values: `draft`, `scheduled`, `sending`, `sent`, `cancelled`, `failed`.
 7. (PUMP-02B build prerequisite) `pump-cancel` Edge function is deployed and reachable.
 
@@ -680,7 +680,7 @@ Verify against project `rkytnffgmwnnmewevqgp` (per global operating rules → De
 
 ### 9.2 Slice-specific caveats
 
-- **`DataTable` server-side mode.** PUMP-02 wires `serverSide={{ fetchData, enableServerSorting: true }}` and consumes `pageIndex`, `pageSize`, `sorting` via the callback. The slice owns the toolbar above the DataTable; the DataTable's built-in Search, Filter, Create, Export, Import features are disabled. `rbac` prop is `{ pageName: 'CommsLog' }` — pace-core2 internally derives operation context for row-action gating, but PUMP-02's row-action gating is calculated externally via `useCan` and the row's `created_by` because the OR rule is custom.
+- **`DataTable` server-side mode.** PUMP-02 wires `serverSide={{ fetchData, enableServerSorting: true }}` and consumes `pageIndex`, `pageSize`, `sorting` via the callback. The slice owns the toolbar above the DataTable; the DataTable's built-in Search, Filter, Create, Export, Import features are disabled. `rbac` prop is `{ pageName: 'comms-log' }` — pace-core2 internally derives operation context for row-action gating, but PUMP-02's row-action gating is calculated externally via `useCan` and the row's `created_by` because the OR rule is custom.
 - **`Dialog` URL binding.** The drill-down dialog's `open` is bound to `useSearchParams().get('message')` (truthy → open, null → closed). `onOpenChange(false)` calls `navigate({ search: '<remaining filters>' })` so closing the dialog clears `?message=<id>` while leaving the rest of the URL state intact.
 - **`useCommRbacContext` consumption.** PUMP-02 imports the hook from PUMP-01's local provider module (the import path is the PUMP-01 component file — PUMP-02 does NOT import from `@solvera/pace-core/comms`). Reading the hook returns `{ canCompose, canSend, canSchedule }`; PUMP-02 consumes `canCompose` only. If pace-core2 later publishes the runtime provider/hook, PUMP-01's local fallback is retired and the import path moves to `@solvera/pace-core/comms` — PUMP-02's consumption pattern is unchanged.
 - **`useSecureSupabase` invocation.** PUMP-02 calls `useSecureSupabase()` without arguments — pace-core2 resolves the underlying client internally. The returned client is used for both the table reads (list, recipient list, delivery events) and the draft DELETE; it is also used as the surface for `secureSupabase.functions.invoke('pump-cancel', ...)`.
@@ -696,14 +696,14 @@ Verify against project `rkytnffgmwnnmewevqgp` (per global operating rules → De
 
 #### Page-level access (A)
 
-`<PagePermissionGuard pageName="CommsLog" operation="read">` wraps the `/` route. PUMP-01 owns the mount; PUMP-02 inherits the gate. Default fallback: `<AccessDenied />`. Scope passed by PUMP-01 is resolved internally from `<OrganisationServiceProvider>`. Loading state renders `null` (no `loading` prop is supplied).
+`<PagePermissionGuard pageName="comms-log" operation="read">` wraps the `/` route. PUMP-01 owns the mount; PUMP-02 inherits the gate. Default fallback: `<AccessDenied />`. Scope passed by PUMP-01 is resolved internally from `<OrganisationServiceProvider>`. Loading state renders `null` (no `loading` prop is supplied).
 
 #### Action-level access (A)
 
 | Action | Permission gate | Visible / enabled when |
 |---|---|---|
-| List view / Filter toolbar / Pagination / Sort / Refresh | `read:page.CommsLog` (gated by the page guard) | Always once the route content renders. |
-| Drill-down open (row click) | `read:page.CommsLog` (same gate) | Always once the route content renders. |
+| List view / Filter toolbar / Pagination / Sort / Refresh | `read:page.comms-log` (gated by the page guard) | Always once the route content renders. |
+| Drill-down open (row click) | `read:page.comms-log` (same gate) | Always once the route content renders. |
 | Compose CTA (header) | `useCommRbacContext().canCompose` | True. |
 | Compose CTA (empty state) | `useCommRbacContext().canCompose` | True. |
 
@@ -712,9 +712,9 @@ Verify against project `rkytnffgmwnnmewevqgp` (per global operating rules → De
 | Role / capability | Read list | Drill-down | Compose CTA |
 |---|---|---|---|
 | No PUMP grants | No (`AccessDenied`) | No | n/a |
-| `read:page.CommsLog` only | Yes (non-draft rows + own drafts) | Yes | Hidden |
-| `read` + `create:page.CommsLog` | Yes | Yes | Visible |
-| `read` + `update:page.CommsLog` | Yes (non-draft + own drafts) | Yes | Hidden |
+| `read:page.comms-log` only | Yes (non-draft rows + own drafts) | Yes | Hidden |
+| `read` + `create:page.comms-log` | Yes | Yes | Visible |
+| `read` + `update:page.comms-log` | Yes (non-draft + own drafts) | Yes | Hidden |
 | `read` + `update` + `create` | Yes | Yes | Visible |
 
 ### B. Row actions
@@ -723,21 +723,21 @@ Verify against project `rkytnffgmwnnmewevqgp` (per global operating rules → De
 
 | Action | Permission gate | Visible / enabled when |
 |---|---|---|
-| Cancel row action | (`user.id === row.created_by`) OR `useCan('update:page.CommsLog', { organisationId })` | True AND row is `status === 'scheduled'`. |
-| Delete row action | `user.id === row.created_by` AND `useCan('delete:page.CommsLog', { organisationId })` | True AND row is `status === 'draft'`. |
+| Cancel row action | (`user.id === row.created_by`) OR `useCan('update:page.comms-log', { organisationId })` | True AND row is `status === 'scheduled'`. |
+| Delete row action | `user.id === row.created_by` AND `useCan('delete:page.comms-log', { organisationId })` | True AND row is `status === 'draft'`. |
 
 #### Role × action matrix (B)
 
 | Role / capability | Cancel scheduled (own) | Cancel scheduled (others') | Delete own draft | Delete others' drafts |
 |---|---|---|---|---|
 | `read` only | No (button hidden) | No (button hidden) | No (button hidden) | No (button hidden + row invisible via SELECT split) |
-| `read` + `update:page.CommsLog` | Yes | Yes | No | No (row invisible) |
-| `read` + `delete:page.CommsLog` | No | No | Yes | No (button hidden by SPA-side own-drafts restriction) |
+| `read` + `update:page.comms-log` | Yes | Yes | No | No (row invisible) |
+| `read` + `delete:page.comms-log` | No | No | Yes | No (button hidden by SPA-side own-drafts restriction) |
 | `read` + `update` + `delete` | Yes | Yes | Yes | No (button hidden by SPA-side own-drafts restriction; admin-delete-others'-drafts is intentionally not exposed in v1) |
 
 #### Edge enforcement (B)
 
-`pump-cancel` Edge applies the OR rule (caller in same org AND (`created_by` OR `update:page.CommsLog`)) regardless of SPA-side visibility. An operator who manipulates the SPA to send an unauthorised cancel request receives `PUMP_CANCEL_OWNER_MISMATCH` or `PUMP_RBAC_DENIED`. The pace-core2 `pumpCancel` helper requires patching from AND to OR before PUMP-02B build merges (build prerequisite — see §15).
+`pump-cancel` Edge applies the OR rule (caller in same org AND (`created_by` OR `update:page.comms-log`)) regardless of SPA-side visibility. An operator who manipulates the SPA to send an unauthorised cancel request receives `PUMP_CANCEL_OWNER_MISMATCH` or `PUMP_RBAC_DENIED`. The pace-core2 `pumpCancel` helper requires patching from AND to OR before PUMP-02B build merges (build prerequisite — see §15).
 
 #### Proxy / impersonation
 
@@ -751,19 +751,19 @@ Implementation status (2026-05-20): see [`docs/delivery/PUMP-02-ac-status.md`](.
 
 ### A. Read path
 
-1. **Given** an authenticated operator with `read:page.CommsLog` and at least one non-draft `pump_message` row in their organisation, **when** they navigate to `/`, **then** the list view renders the six-column DataTable with one row per visible message, sorted by `(sent_at NULLS LAST, created_at, id)` DESC. (Traces §4 items 1–4, 14–24.)
-2. **Given** an operator with `read:page.CommsLog` and zero `pump_message` rows in their organisation under the active filters, **when** they navigate to `/`, **then** the inline empty-state panel renders with copy "No messages yet — start one to see it here." (Traces §4 items 8–9.)
-3. **Given** an operator with `read:page.CommsLog` and `useCommRbacContext().canCompose === true` viewing the empty state, **when** the panel renders, **then** the panel includes a "Compose" `Button` that navigates to `/comms/create` on click. (Traces §4 item 9.)
-4. **Given** an operator without `read:page.CommsLog`, **when** they navigate to `/`, **then** the route renders `<AccessDenied />` (rendered by PUMP-01's guard) instead of any PUMP-02 content. (Traces §4 item 1; §10A page-level access.)
-5. **Given** an operator with `read:page.CommsLog` viewing the list, **when** they click the Channel filter and select "Email", **then** the URL updates to include `?channel=email`, the list query re-runs with `channel = 'email'` predicate, only email rows remain, and `pageIndex` resets to 0. (Traces §4 items 25–28; §6 BR-Filters, BR-FilterPersistence.)
-6. **Given** an operator with `read:page.CommsLog` viewing the list, **when** they pick a Date range "From = 2026-04-01, To = 2026-05-01", **then** the URL updates to include `?from=2026-04-01&to=2026-05-01`, the list query re-runs filtering on `coalesce(sent_at, scheduled_at, created_at)` between the two inclusive bounds, and the result rows fall within the range. (Traces §4 items 25–28; §6 BR-FilterDateDimension.)
-7. **Given** an operator with `read:page.CommsLog` viewing a list with more than 25 rows, **when** they click the second pagination page, **then** the URL updates to `?pageIndex=1`, the list re-runs with offset = `pageSize`, and rows 26–50 render. The pagination footer shows "Page 2 of <Y>". (Traces §4 item 24; §6 BR-Pagination.)
+1. **Given** an authenticated operator with `read:page.comms-log` and at least one non-draft `pump_message` row in their organisation, **when** they navigate to `/`, **then** the list view renders the six-column DataTable with one row per visible message, sorted by `(sent_at NULLS LAST, created_at, id)` DESC. (Traces §4 items 1–4, 14–24.)
+2. **Given** an operator with `read:page.comms-log` and zero `pump_message` rows in their organisation under the active filters, **when** they navigate to `/`, **then** the inline empty-state panel renders with copy "No messages yet — start one to see it here." (Traces §4 items 8–9.)
+3. **Given** an operator with `read:page.comms-log` and `useCommRbacContext().canCompose === true` viewing the empty state, **when** the panel renders, **then** the panel includes a "Compose" `Button` that navigates to `/comms/create` on click. (Traces §4 item 9.)
+4. **Given** an operator without `read:page.comms-log`, **when** they navigate to `/`, **then** the route renders `<AccessDenied />` (rendered by PUMP-01's guard) instead of any PUMP-02 content. (Traces §4 item 1; §10A page-level access.)
+5. **Given** an operator with `read:page.comms-log` viewing the list, **when** they click the Channel filter and select "Email", **then** the URL updates to include `?channel=email`, the list query re-runs with `channel = 'email'` predicate, only email rows remain, and `pageIndex` resets to 0. (Traces §4 items 25–28; §6 BR-Filters, BR-FilterPersistence.)
+6. **Given** an operator with `read:page.comms-log` viewing the list, **when** they pick a Date range "From = 2026-04-01, To = 2026-05-01", **then** the URL updates to include `?from=2026-04-01&to=2026-05-01`, the list query re-runs filtering on `coalesce(sent_at, scheduled_at, created_at)` between the two inclusive bounds, and the result rows fall within the range. (Traces §4 items 25–28; §6 BR-FilterDateDimension.)
+7. **Given** an operator with `read:page.comms-log` viewing a list with more than 25 rows, **when** they click the second pagination page, **then** the URL updates to `?pageIndex=1`, the list re-runs with offset = `pageSize`, and rows 26–50 render. The pagination footer shows "Page 2 of <Y>". (Traces §4 item 24; §6 BR-Pagination.)
 8. **Given** an operator viewing the list, **when** they click the Date column header, **then** the sort direction toggles (`?sortDir=asc`), the list re-runs in ASC order, and the rows render oldest-first. Clicking again returns to DESC. (Traces §4 item 23; §6 BR-ColumnSort.)
 9. **Given** an operator clicks anywhere on a non-Actions cell of a row whose id is `<uuid>`, **when** the dialog opens, **then** the URL updates to include `?message=<uuid>`, the drill-down dialog renders the row's header, recipient list, and delivery-event timeline. Pressing Escape closes the dialog and clears `?message=<uuid>` from the URL while leaving any active filter params intact. (Traces §4 items 30–36; §6 BR-DrillDown, BR-DrillDownContent.)
 10. **Given** an operator pastes `/?message=<uuid>` into the address bar with `<uuid>` resolving to a `pump_message` row in their organisation, **when** the page mounts, **then** the list and the drill-down dialog both render — the list shows the un-filtered first page; the dialog shows the message detail. (Traces §4 item 31; §6 BR-DrillDown.)
 11. **Given** an operator pastes `/?message=not-a-real-id` into the address bar, **when** the page mounts, **then** the list renders normally and the drill-down dialog opens but renders the inline error state "Message not found or not visible." with no recipient or event sections. (Traces §4 item 13; §6 BR-MalformedDrillDownId.)
 12. **Given** the list query fails (e.g. RLS rejection or network error), **when** the failure surfaces, **then** the table area shows the error panel with copy "Couldn't load communications." and a Retry button, and a `variant="destructive"` toast carries the underlying error message. (Traces §4 item 11; §6 BR-FetchError.)
-13. **Given** the list contains rows authored by another operator with `status = 'draft'`, **when** the list renders, **then** those drafts do not appear (the SELECT split makes them invisible) regardless of the operator's `read:page.CommsLog` grant. (Traces §6 BR-DraftVisibility.)
+13. **Given** the list contains rows authored by another operator with `status = 'draft'`, **when** the list renders, **then** those drafts do not appear (the SELECT split makes them invisible) regardless of the operator's `read:page.comms-log` grant. (Traces §6 BR-DraftVisibility.)
 14. **Given** a row with `status = 'draft'` authored by the authenticated user, **when** the list renders, **then** the row is visible with status badge "Draft" (variant `outline-sec-muted`), the Date column shows the `created_at` value (since `sent_at` and `scheduled_at` are null), and the Recipients cell shows "—" with `aria-label="Pool not yet resolved"` if `total_recipients` is null. (Traces §4 items 17–20; §6 BR-DateColumn, BR-RecipientCount, BR-StatusBadge.)
 15. **Given** an open drill-down for a message with three recipients including one bounced, **when** the recipient query resolves, **then** the Recipients section renders three rows with the bounced row's Status badge using `solid-acc-strong` variant ("Bounced") and the `failure_reason` cell populated. (Traces §4 item 34; §6 BR-RecipientList, BR-RecipientStatusBadge.)
 16. **Given** an operator clicks the Refresh icon button, **when** the click fires, **then** the list query refetches (the icon button briefly disables during the in-flight state) and the open drill-down's queries are invalidated such that the next reopen refetches them. (Traces §4 item 29; §6 BR-RefreshSemantics.)
@@ -771,12 +771,12 @@ Implementation status (2026-05-20): see [`docs/delivery/PUMP-02-ac-status.md`](.
 ### B. Row actions
 
 17. **Given** an operator who is the author of a `pump_message` row with `status = 'scheduled'`, **when** the list renders, **then** the row's Actions kebab menu contains a Cancel item; clicking Cancel opens the cancel confirmation dialog with copy "Cancel this scheduled message? It will not send." (Traces §4 items 39, 48–49; §6 BR-CancelEligibility, BR-CancelConfirm.)
-18. **Given** an admin (`update:page.CommsLog`) viewing a scheduled message authored by another operator in the same org, **when** the list renders, **then** the row's Actions kebab menu contains the Cancel item; clicking it opens the cancel confirmation dialog. (Traces §4 item 39; §6 BR-CancelEligibility.)
+18. **Given** an admin (`update:page.comms-log`) viewing a scheduled message authored by another operator in the same org, **when** the list renders, **then** the row's Actions kebab menu contains the Cancel item; clicking it opens the cancel confirmation dialog. (Traces §4 item 39; §6 BR-CancelEligibility.)
 19. **Given** an operator clicks "Cancel message" in the cancel confirmation dialog, **when** the Edge returns `{ ok: true, data: { message_id } }`, **then** the dialog closes, the list refetches, the row's status now reads `Cancelled`, and a `variant="success"` toast reads "Message cancelled." (Traces §4 item 52; §6 BR-CancelMutation.)
 20. **Given** an operator clicks "Cancel message" and the Edge returns `{ ok: false, error: { code: 'PUMP_CANCEL_INVALID_STATUS', message: 'Only scheduled messages can be cancelled.' } }`, **when** the response surfaces, **then** the dialog closes, a `variant="destructive"` toast reads "Only scheduled messages can be cancelled.", and the list refetches. (Traces §4 item 53; §6 BR-CancelFailure.)
 21. **Given** an operator clicks "Cancel message" and the network throws, **when** the failure surfaces, **then** the dialog closes and a `variant="destructive"` toast reads "Couldn't reach the cancel service." (Traces §4 item 57; §6 BR-CancelFailure.)
-22. **Given** the operator is the author of a `pump_message` row with `status = 'draft'` AND holds `delete:page.CommsLog`, **when** the list renders, **then** the row's Actions kebab menu contains a Delete item; clicking it opens the delete confirmation dialog with copy "Delete this draft? This cannot be undone." (Traces §4 items 40, 58–59; §6 BR-DeleteVisibility, BR-DeleteConfirm.)
-23. **Given** an admin with `update:page.CommsLog` + `delete:page.CommsLog` viewing the list, **when** the list renders, **then** no row authored by another operator shows the Delete action (the SELECT split makes others' drafts invisible to admins, and even if a row were visible the SPA-side restriction would hide Delete). (Traces §6 BR-DeleteVisibility.)
+22. **Given** the operator is the author of a `pump_message` row with `status = 'draft'` AND holds `delete:page.comms-log`, **when** the list renders, **then** the row's Actions kebab menu contains a Delete item; clicking it opens the delete confirmation dialog with copy "Delete this draft? This cannot be undone." (Traces §4 items 40, 58–59; §6 BR-DeleteVisibility, BR-DeleteConfirm.)
+23. **Given** an admin with `update:page.comms-log` + `delete:page.comms-log` viewing the list, **when** the list renders, **then** no row authored by another operator shows the Delete action (the SELECT split makes others' drafts invisible to admins, and even if a row were visible the SPA-side restriction would hide Delete). (Traces §6 BR-DeleteVisibility.)
 24. **Given** an operator clicks "Delete draft" in the delete confirmation dialog, **when** the DELETE returns one row, **then** the dialog closes, the list refetches, the row no longer renders, and a `variant="success"` toast reads "Draft deleted." (Traces §4 item 62; §6 BR-DeleteMutation.)
 25. **Given** an operator clicks "Delete draft" and the DELETE returns zero rows (the draft was already removed in another tab), **when** the response resolves, **then** the dialog closes, the list refetches, and a `variant="default"` toast reads "Draft already removed." No destructive toast appears. (Traces §4 item 63; §6 BR-DeleteRace.)
 26. **Given** an operator clicks "Delete draft" and the DELETE fails with an RLS rejection, **when** the failure surfaces, **then** the dialog closes, the list does not refetch, and a `variant="destructive"` toast carries the underlying error message. (Traces §4 item 64; §6 BR-DeleteFailure.)
@@ -787,7 +787,7 @@ Implementation status (2026-05-20): see [`docs/delivery/PUMP-02-ac-status.md`](.
 
 ### A. Read path
 
-1. **Live RLS — non-draft visibility.** As an authenticated operator with `read:page.CommsLog`, query `SELECT count(*) FROM pump_message WHERE organisation_id = '<their-org>'::uuid AND status = 'sent'` directly via `useSecureSupabase()`. Confirm the count matches the count of `sent` rows in dev-db for that org.
+1. **Live RLS — non-draft visibility.** As an authenticated operator with `read:page.comms-log`, query `SELECT count(*) FROM pump_message WHERE organisation_id = '<their-org>'::uuid AND status = 'sent'` directly via `useSecureSupabase()`. Confirm the count matches the count of `sent` rows in dev-db for that org.
 2. **Live RLS — draft visibility split.** As operator A, INSERT a draft row authored by operator B (via service role). Then as operator A, query `SELECT count(*) FROM pump_message WHERE organisation_id = '<their-org>'::uuid AND status = 'draft'`. Confirm operator B's draft is NOT included in the count.
 3. **Foreign-org isolation.** As an operator in org X, query `pump_message` filtered by `organisation_id = '<other-org>'::uuid`. Confirm zero rows returned regardless of actual row count in the other org.
 4. **Initial sort stability.** Insert two messages within the same millisecond `created_at`. Confirm the list returns them in stable `id` ASC order under the same `(sent_at NULLS LAST, created_at, id)` DESC sort.
@@ -805,7 +805,7 @@ Implementation status (2026-05-20): see [`docs/delivery/PUMP-02-ac-status.md`](.
 13. **Cancel race against `sending`.** Manually flip the row's `status` from `scheduled` to `sending` (via service role) between opening the confirm dialog and clicking "Cancel message". Confirm the Edge returns `PUMP_CANCEL_INVALID_STATUS`, the destructive toast surfaces, and the list refetches showing the new `sending` status.
 14. **Delete happy path.** As the author of a draft, click Delete and confirm. Inspect dev-db: confirm the row is gone. Confirm the success toast appeared.
 15. **Delete race on already-deleted draft.** Manually delete the draft in dev-db (via service role) between opening the confirm dialog and clicking "Delete draft". Confirm the SPA's DELETE returns 0 rows, the neutral toast "Draft already removed." appears, and the list refetches.
-16. **Delete admin-delete restriction.** As an admin (`update:page.CommsLog` + `delete:page.CommsLog`), confirm the Delete action does not appear on any row authored by another operator (the SELECT split makes those rows invisible; the SPA-side `created_by` check makes the action hidden).
+16. **Delete admin-delete restriction.** As an admin (`update:page.comms-log` + `delete:page.comms-log`), confirm the Delete action does not appear on any row authored by another operator (the SELECT split makes those rows invisible; the SPA-side `created_by` check makes the action hidden).
 
 ---
 
@@ -831,7 +831,7 @@ Implementation status (2026-05-20): see [`docs/delivery/PUMP-02-ac-status.md`](.
 - All `pump_message`, `pump_message_recipient`, and `pump_delivery_event` reads go via `useSecureSupabase()` against the post-p4 base tables. The slice does NOT call the legacy `pump_comms_log` reporting view. The slice does NOT call `useCommTemplates`, `useCommSendAdapter`, or any adapter-backed hook.
 - The list query is a single direct `SELECT` against `pump_message`. The slice does NOT add `created_by = auth.uid() OR status != 'draft'` predicates of its own — the dev-db RLS split owns draft visibility.
 - The `pump-cancel` Edge invocation goes via `secureSupabase.functions.invoke('pump-cancel', { body: ... })`. The slice does NOT import or call `pumpCancel` from `@solvera/pace-core/comms/edge-service` (server-side helper). The slice does NOT extend `CommSendAdapter` with a `cancel` method.
-- The Delete mutation issues a direct `DELETE` against `pump_message` with both `status = 'draft'` and `created_by = auth.uid()` in the predicate (defensive — RLS only enforces `delete:page.CommsLog`).
+- The Delete mutation issues a direct `DELETE` against `pump_message` with both `status = 'draft'` and `created_by = auth.uid()` in the predicate (defensive — RLS only enforces `delete:page.comms-log`).
 - The slice does NOT introduce app-local Tooltip primitives. (pace-core2 capability gap; surface help via inline labels, `aria-label`, surface-level helper copy.)
 - The slice does NOT mount `<PagePermissionGuard>`, `<ToastProvider>`, or `<CommRbacContextProvider>` — PUMP-01 owns those mounts.
 - The slice does NOT subscribe to Supabase Realtime, does NOT poll, and does NOT refetch on window focus. Refresh semantics are per BR-RefreshSemantics.
@@ -856,7 +856,7 @@ Implementation status (2026-05-20): see [`docs/delivery/PUMP-02-ac-status.md`](.
 
 ## 16. Do not
 
-- Do not re-mount `<PagePermissionGuard pageName="CommsLog" operation="read">` on `/`. PUMP-01 owns the mount.
+- Do not re-mount `<PagePermissionGuard pageName="comms-log" operation="read">` on `/`. PUMP-01 owns the mount.
 - Do not mount `<ToastProvider>`. PUMP-01 owns the mount; import `toast` module-level.
 - Do not mount `<CommRbacContextProvider>`. PUMP-01 owns the mount; import `useCommRbacContext` from PUMP-01's local provider module.
 - Do not consult `pump_comms_log` (the legacy reporting view) for any list, drill-down, or count. Read against the post-p4 base tables only.
@@ -866,7 +866,7 @@ Implementation status (2026-05-20): see [`docs/delivery/PUMP-02-ac-status.md`](.
 - Do not introduce a `source_app` column on the list. `source_app` text appears inline in the drill-down dialog header only.
 - Do not introduce row-level engagement aggregate columns (legacy "Opens / Clicks"). Engagement appears in the drill-down only.
 - Do not show the Delete row action on non-draft rows.
-- Do not show the Delete row action on other operators' drafts in v1, even when the user holds `delete:page.CommsLog`. (The SELECT split already hides those rows from admins, but the SPA-side `created_by` check is required defensively in case the policy changes.)
+- Do not show the Delete row action on other operators' drafts in v1, even when the user holds `delete:page.comms-log`. (The SELECT split already hides those rows from admins, but the SPA-side `created_by` check is required defensively in case the policy changes.)
 - Do not surface `'opened'` or `'clicked'` as recipient-status badge values. Those are not enum values; engagement is tracked via `opened_at` / `clicked_at` timestamps.
 - Do not invoke `pumpCancel` from `@solvera/pace-core/comms/edge-service` directly. It is the server-side helper used inside the Edge runtime.
 - Do not extend `CommSendAdapter` with a `cancel` method.

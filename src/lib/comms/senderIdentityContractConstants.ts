@@ -22,7 +22,7 @@ export const RESOLVED_FROM_VALUES = [
   'source_context',
   'organisation',
   'ancestor',
-  'platform_default',
+  'unresolved',
 ] as const;
 
 export type ResolvedFrom = (typeof RESOLVED_FROM_VALUES)[number];

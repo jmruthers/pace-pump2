@@ -7,6 +7,7 @@ import {
 } from '@solvera/pace-core/components';
 import { formatTemplateCreatedAt } from './formatTemplateCreatedAt';
 import type { OrganisationTemplateRow } from '@/lib/templates/types';
+import { PUMP_PAGE } from '@/config/pumpPageNames';
 
 export interface TemplatesListPanelProps {
   rows: OrganisationTemplateRow[];
@@ -192,7 +193,7 @@ export function TemplatesListPanel({
     <DataTable<OrganisationTemplateRow>
       data={rows}
       columns={columns}
-      rbac={{ pageName: 'CommsTemplates' }}
+      rbac={{ pageName: PUMP_PAGE.commsTemplates }}
       isLoading={isLoading}
       getRowId={(row) => row.id}
       onRowActivate={onPreview}

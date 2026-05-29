@@ -22,10 +22,13 @@ function shouldRefetchListOnCancelError(code: string): boolean {
 }
 
 export function useCancelPumpMessage(onListRefresh?: () => void) {
-  const supabase = usePumpSupabase() as PumpSupabaseClient;
+  const supabase = usePumpSupabase() as PumpSupabaseClient | null;
 
   return useMutation({
     mutationFn: async ({ messageId, organisationId }: CancelInput) => {
+      if (supabase == null) {
+        throw new Error('Supabase client is not available.');
+      }
       if (supabase.functions == null) {
         throw new Error("Couldn't reach the cancel service.");
       }

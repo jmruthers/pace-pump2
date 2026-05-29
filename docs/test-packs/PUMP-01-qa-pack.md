@@ -26,7 +26,7 @@
 | S-14 | AC-18 | Authenticated shell — user menu | Sign out via the user menu. | Redirect to `/login`. | - | |
 | S-15 | AC-19 | Change-password dialog | Open the change-password dialog from the user menu, submit, and observe behaviour. | Dialog-close behaviour matches requirement (success closes dialog; no toast or redirect on success). | - | |
 | S-16 | AC-14 | Authenticated shell (idle) | Trigger inactivity by simulated idle until the 28-minute mark. | `<InactivityWarningModal>` appears. | - | |
-| S-17 | §12-17 | dev-db (`rkytnffgmwnnmewevqgp`) | Against dev-db: confirm `rbac_apps` row `name = 'PUMP'`, `is_active = true`; confirm `rbac_app_pages` rows for `(app = 'PUMP', page_name IN ('CommsLog', 'CommsTemplates'))`. | RBAC catalogue rows present as specified. | - | |
+| S-17 | §12-17 | dev-db (`rkytnffgmwnnmewevqgp`) | Against dev-db: confirm `rbac_apps` row `name = 'PUMP'`, `is_active = true`; confirm `rbac_app_pages` rows for `(app = 'PUMP', page_name IN ('comms-log', 'comms-templates'))`. | RBAC catalogue rows present as specified. | - | |
 
 ## Test run summary
 
