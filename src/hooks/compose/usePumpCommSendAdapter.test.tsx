@@ -31,7 +31,7 @@ vi.mock('@solvera/pace-core/comms', async () => {
         loadTemplates: vi.fn(),
         loadMergeFields: vi.fn(),
         send: baseSend,
-        schedule: vi.fn(),
+        schedule: scheduleMock,
         sendTest: baseSendTest,
         saveDraft: baseSaveDraft,
       } satisfies CommSendAdapter;
@@ -47,8 +47,13 @@ vi.mock('@solvera/pace-core/rbac', () => ({
   }),
 }));
 
+const { toastMock, scheduleMock } = vi.hoisted(() => ({
+  toastMock: vi.fn(),
+  scheduleMock: vi.fn(),
+}));
+
 vi.mock('@solvera/pace-core/components', () => ({
-  toast: vi.fn(),
+  toast: toastMock,
 }));
 
 const draft: CommDraft = {
@@ -64,6 +69,8 @@ describe('usePumpCommSendAdapter', () => {
     baseSendTest.mockReset();
     baseSaveDraft.mockReset();
     baseSend.mockReset();
+    scheduleMock.mockReset();
+    toastMock.mockReset();
     capturedAdapterOptions = null;
     upsertMock.mockResolvedValue({ error: null });
   });
@@ -179,5 +186,85 @@ describe('usePumpCommSendAdapter', () => {
     expect(capturedAdapterOptions?.sourceContextType).toBeUndefined();
     expect(capturedAdapterOptions?.sourceContextId).toBeUndefined();
     expect(capturedAdapterOptions?.sourceApp).toBe('pump');
+  });
+
+  it('returns validation error when draft is invalid', async () => {
+    const { result } = renderHook(() =>
+      usePumpCommSendAdapter({
+        organisationId: 'org-1',
+        sourceContext: { sourceContextType: undefined, sourceContextId: undefined },
+        draftMessageId: 'draft-uuid',
+        recipientPool: { type: 'org_members', organisation_id: 'org-1', filters: {} },
+        createdBy: 'user-1',
+      })
+    );
+
+    const saved = await result.current.saveDraft({
+      channel: 'email',
+      body_text: '',
+      sender_name: 'Org',
+    });
+    expect(saved.ok).toBe(false);
+    if (!saved.ok) {
+      expect(saved.error.code).toBe('COMMS_DRAFT_INVALID');
+    }
+    expect(upsertMock).not.toHaveBeenCalled();
+  });
+
+  it('shows success toast when sendTest succeeds', async () => {
+    baseSendTest.mockResolvedValueOnce({ ok: true, data: { sent: true } });
+
+    const { result } = renderHook(() =>
+      usePumpCommSendAdapter({
+        organisationId: 'org-1',
+        sourceContext: { sourceContextType: undefined, sourceContextId: undefined },
+        draftMessageId: 'draft-uuid',
+        recipientPool: { type: 'org_members', organisation_id: 'org-1', filters: {} },
+        createdBy: 'user-1',
+      })
+    );
+
+    const sendResult = await result.current.sendTest({
+      organisation_id: 'org-1',
+      channel: 'email',
+      body_text: draft.body_text ?? '',
+      sender_name: draft.sender_name ?? '',
+      sender_email: draft.sender_email,
+      source_app: 'pump',
+    });
+
+    expect(sendResult.ok).toBe(true);
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: 'success' })
+    );
+  });
+
+  it('does not show toast when sendTest fails', async () => {
+    baseSendTest.mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'SEND_FAILED', message: 'failed' },
+    });
+
+    const { result } = renderHook(() =>
+      usePumpCommSendAdapter({
+        organisationId: 'org-1',
+        sourceContext: { sourceContextType: undefined, sourceContextId: undefined },
+        draftMessageId: 'draft-uuid',
+        recipientPool: { type: 'org_members', organisation_id: 'org-1', filters: {} },
+        createdBy: 'user-1',
+      })
+    );
+
+    const sendResult = await result.current.sendTest({
+      organisation_id: 'org-1',
+      channel: 'email',
+      body_text: draft.body_text ?? '',
+      sender_name: draft.sender_name ?? '',
+      sender_email: draft.sender_email,
+      source_app: 'pump',
+    });
+
+    expect(sendResult.ok).toBe(false);
+    expect(toastMock).not.toHaveBeenCalled();
   });
 });

@@ -21,6 +21,10 @@ import {
   truncateBodyPreview,
 } from '@/lib/comms/commsLogFormat.js';
 import type { CommsLogSearchState, PumpMessageRow } from '@/lib/comms/commsLogTypes.js';
+import {
+  isCommsLogCancelActionHidden,
+  isCommsLogDeleteActionHidden,
+} from '@/lib/comms/commsLogRowActions.js';
 import { PUMP_PAGE } from '@/config/pumpPageNames';
 import { ChannelBadge, MessageStatusBadge } from './commsLogBadges.js';
 
@@ -116,30 +120,16 @@ export function CommsLogTable({
     list.push({
       label: 'Cancel',
       variant: 'destructive',
-      hidden: (row) => {
-        if (row.status !== 'scheduled') {
-          return true;
-        }
-        if (userId == null) {
-          return true;
-        }
-        return !(userId === row.created_by || canUpdate);
-      },
+      hidden: (row) =>
+        isCommsLogCancelActionHidden(row, { userId, canUpdate }),
       onClick: onCancelRow,
     });
 
     list.push({
       label: 'Delete',
       variant: 'destructive',
-      hidden: (row) => {
-        if (row.status !== 'draft') {
-          return true;
-        }
-        if (userId == null || !canDelete) {
-          return true;
-        }
-        return userId !== row.created_by;
-      },
+      hidden: (row) =>
+        isCommsLogDeleteActionHidden(row, { userId, canDelete }),
       onClick: onDeleteRow,
     });
 

@@ -55,11 +55,47 @@ describe('senderIdentityContract', () => {
     expect(coerceEffectivePumpSenderIdentityRow('bad')).toBeNull();
   });
 
+  it('coerces null or non-object first array elements to null (PU03)', () => {
+    expect(coerceEffectivePumpSenderIdentityRow([null])).toBeNull();
+    expect(coerceEffectivePumpSenderIdentityRow(['not-a-row'])).toBeNull();
+  });
+
   it('expectSingleSenderIdentityRow requires exactly one row', () => {
     const row = sampleRow();
     expect(expectSingleSenderIdentityRow([row])).toEqual(row);
     expect(() => expectSingleSenderIdentityRow([])).toThrow(/exactly one/);
     expect(() => expectSingleSenderIdentityRow([row, row])).toThrow(/exactly one/);
+  });
+
+  it('expectSingleSenderIdentityRow rejects non-array payloads (PU03)', () => {
+    expect(() => expectSingleSenderIdentityRow(sampleRow())).toThrow(
+      /Expected RPC to return an array/
+    );
+  });
+
+  it('expectSingleSenderIdentityRow rejects arrays with invalid rows (PU03)', () => {
+    expect(() => expectSingleSenderIdentityRow([null])).toThrow(
+      /Expected a valid sender identity row/
+    );
+  });
+
+  it('assertEffectivePumpSenderIdentityShape rejects missing fields (PU03)', () => {
+    const row = sampleRow();
+    const incomplete = { ...row };
+    delete (incomplete as Partial<EffectivePumpSenderIdentity>).canSendSms;
+    expect(() =>
+      assertEffectivePumpSenderIdentityShape(incomplete as EffectivePumpSenderIdentity)
+    ).toThrow(/Missing sender identity field/);
+  });
+
+  it('requires resolvedOrganisationId when resolvedFrom is not unresolved (PU03)', () => {
+    const row = sampleRow({
+      resolvedFrom: 'organisation',
+      resolvedOrganisationId: null,
+    });
+    expect(() => assertEffectivePumpSenderIdentityShape(row)).toThrow(
+      /resolvedOrganisationId must be set/
+    );
   });
 
   it('assertEffectivePumpSenderIdentityShape accepts a valid row', () => {

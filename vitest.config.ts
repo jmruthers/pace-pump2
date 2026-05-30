@@ -46,9 +46,12 @@ export default defineConfig({
     include: [...unitInclude, ...domInclude],
     coverage: {
       provider: 'istanbul',
-      reporter: ['text'],
+      reporter: ['text', 'html'],
       include: coverageConfig.include,
       exclude: coverageConfig.exclude,
+      thresholds: {
+        'src/components/**/*.tsx': { statements: 70, lines: 70 },
+      },
     },
   },
 });
